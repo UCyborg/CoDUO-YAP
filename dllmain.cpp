@@ -82,7 +82,7 @@ LoadsDLLsT originalLoadDLL = nullptr;
 
 struct COD_Classic_Version {
     DWORD WinMain_Check[2];
-    const char* DLLName;
+    const char* cgamename;
     DWORD LoadDLLAddr;
     DWORD DLL_CG_GetViewFov_offset;
     DWORD Cvar_Get_Addr;
@@ -123,10 +123,14 @@ COD_Classic_Version *LoadedGame = NULL;
 
 uintptr_t cg_game_offset = 0;
 
+
 #define CGAME_OFF(x) (cg_game_offset + (x - 0x30000000))
 #define GAME_OFF(x) (game_mp + (x - 0x20000000))
 
 uintptr_t cg(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
+
+    if (cg_game_offset == NULL)
+        return NULL;
 
     uintptr_t result = 0;
 
@@ -194,7 +198,7 @@ double CG_GetViewFov_hook() {
 
 void CheckModule()
 {
-    HMODULE hMod = GetModuleHandleA(LoadedGame->DLLName);
+    HMODULE hMod = GetModuleHandleA(LoadedGame->cgamename);
     if (hMod)
     {
         std::cout << "cgamex86.dll is attached at address: " << hMod << std::endl;
@@ -315,7 +319,7 @@ HMODULE __stdcall LoadLibraryHook(const char* filename) {
 
     auto hModule = LoadLibraryD.unsafe_stdcall<HMODULE>(filename);
 
-    if (strstr(filename, LoadedGame->DLLName) != NULL) {
+    if (strstr(filename, LoadedGame->cgamename) != NULL) {
         codDLLhooks(hModule);
     }
 
@@ -327,7 +331,13 @@ HMODULE __stdcall LoadLibraryHook(const char* filename) {
 SafetyHookInline FreeLibraryD;
 
 BOOL __stdcall FreeLibraryHook(HMODULE hLibModule) {
-    // Get the module's address range
+    char LibraryName[256]{};
+    GetModuleFileNameA(hLibModule, LibraryName, sizeof(LibraryName));
+
+    if (LoadedGame && LoadedGame->cgamename && (strcmp(LibraryName, LoadedGame->cgamename) == 0)) {
+        cg_game_offset = 0;
+    }
+
     uintptr_t moduleStart = (uintptr_t)hLibModule;
     uintptr_t moduleEnd = (uintptr_t)GetModuleEndAddress(hLibModule);
 
