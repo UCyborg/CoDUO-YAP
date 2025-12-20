@@ -1,0 +1,32 @@
+[
+  {
+    "menuName": "briefing",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
+    "menuName": "deadscreen",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
+    "menuName": "gameendscreen",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
+    "menuName": "main",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
+    "menuName": "pregame",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
+    "menuName": "victoryscreen",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
+    "menuName": "options_menu",
+    "alignment": "[BLACKSCREEN]"
+  }
+  
+
+]

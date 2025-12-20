@@ -1,0 +1,29 @@
+[
+  {
+    "shaderName": "gfx/hud/hud@fire_ready_shell.tga",
+    "alignment": "[RB]"
+  },
+  {
+    "shaderName": "gfx/hud/hud@us_rank1.dds",
+    "alignment": "[LB]"
+  },
+  
+  {
+    "shaderName": "gfx/hud/hud@us_rank2.dds",
+    "alignment": "[LB]"
+  },
+  
+  {
+    "shaderName": "gfx/hud/hud@us_rank3.dds",
+    "alignment": "[LB]"
+  },
+  {
+    "shaderName": "gfx/hud/hud@us_rank4.dds",
+    "alignment": "[LB]"
+  },
+  {
+    "shaderName": "gfx/hud/hud@us_rank5.dds",
+    "alignment": "[LB]"
+  }
+
+]

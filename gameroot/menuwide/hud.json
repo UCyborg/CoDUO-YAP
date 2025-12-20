@@ -1,0 +1,24 @@
+[
+  {
+    "menuName": "stance",
+    "alignment": "[LB]"
+  },
+  {
+    "menuName": "tankstatus",
+    "alignment": "[LB]"
+  },
+  {
+    "menuName": "weaponinfo",
+    "alignment": "[RB]"
+  },
+  {
+    "menuName": "Health",
+    "alignment": "[RB]"
+  },
+  {
+    "menuName": "Compass",
+    "alignment": "[LB]"
+  }
+  
+
+]
