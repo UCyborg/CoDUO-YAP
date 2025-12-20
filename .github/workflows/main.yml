@@ -1,0 +1,37 @@
+name: MSBuild
+on:
+  push:
+  pull_request:
+env:
+  SOLUTION_FILE_PATH: .
+  BUILD_CONFIGURATION: Release
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+    - name: Restore NuGet packages
+      working-directory: ${{ env.GITHUB_WORKSPACE }}
+      run: nuget restore ${{ env.SOLUTION_FILE_PATH }}
+    - name: Build solution
+      working-directory: ${{ env.GITHUB_WORKSPACE }}
+      run: msbuild /m /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform=Win32 ${{ env.SOLUTION_FILE_PATH }}
+    - name: Prepare output folder
+      run: |
+        mkdir upload
+        copy "Release\COD_Classic_Hook.asi" upload\
+        copy "Release\COD_Classic_Hook.pdb" upload\
+        xcopy gameroot\menuwide upload\menuwide /E /I /Y
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: COD_Classic_Hook
+        path: upload
