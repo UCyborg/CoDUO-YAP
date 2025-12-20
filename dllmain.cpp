@@ -81,6 +81,7 @@ cvar_t* cg_fovscale;
 cvar_t* cg_fovfixaspectratio;
 cvar_t* safeArea_horizontal;
 cvar_t* r_noborder;
+cvar_t* r_mode_auto;
 void codDLLhooks(HMODULE handle);
 
 void ui_hooks(HMODULE handle);
@@ -560,16 +561,26 @@ int __stdcall glOrtho_detour(double left, double right, double bottom, double to
 
 uintptr_t InsideWinMain;
 
-void sub_431CA0(SafetyHookContext& ctx) {
+uintptr_t cvar_init_og;
+
+int Cvar_Init_hook() {
+    auto result = cdecl_call<int>(cvar_init_og);
 
     int& size_cvars = *(int*)0x4805EC0;
-
-    printf("winmain cvar hooks cvar_get ptr %p size %d\n", Cvar_Get, size_cvars);
+    printf("cvar_init cvar hooks cvar_get ptr %p size %d\n", Cvar_Get, size_cvars);
     cg_fovscale = Cvar_Get((char*)"cg_fovscale", "1.0", CVAR_ARCHIVE);
     cg_fovfixaspectratio = Cvar_Get((char*)"cg_fovfixaspectratio", "1.0", CVAR_ARCHIVE);
     safeArea_horizontal = Cvar_Get((char*)"safeArea_horizontal", "1.0", CVAR_ARCHIVE);
     printf("safearea ptr return %p size after %d\n", safeArea_horizontal, size_cvars);
-    r_noborder = Cvar_Get((char*)"r_noborder", "1", CVAR_ARCHIVE);
+    r_noborder = Cvar_Get((char*)"r_noborder", "0", CVAR_ARCHIVE);
+    r_mode_auto = Cvar_Get((char*)"r_mode_auto", "0", CVAR_ARCHIVE);
+
+    return result;
+}
+
+void sub_431CA0(SafetyHookContext& ctx) {
+
+
 
 }
 void LoadMenuConfigs();
@@ -1368,6 +1379,9 @@ SafetyHookInline Cvar_Set_og;
 cvar_s* __cdecl Cvar_Set(const char* cvar_name, const char* value, BOOL force) {
     auto result = Cvar_Set_og.ccall<cvar_s*>(cvar_name, value, force);
 
+    if (cvar_name && value) {
+        //printf("cvar_name %s value %s cvar ptr %p\n", cvar_name, value, result);
+    }
 
     if (result && result->name && (strcmp(result->name, "safeArea_horizontal") == 0)) {
         StaticInstructionPatches(NULL,false);
@@ -1404,12 +1418,49 @@ float* __cdecl SCR_AdjustFrom640(float* x, float* y, float* w, float* h) {
 
 }
 
-void InitHook() {
+//#include <zlib/zlib.h>
+//#include <sys/stat.h>
+//std::string GetBinaryResource(int name)
+//{
+//    HMODULE handle;
+//    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)GetBinaryResource, &handle);
+//
+//    HRSRC rc = FindResource(handle, MAKEINTRESOURCE(name), MAKEINTRESOURCE(256));
+//    HGLOBAL rcData = LoadResource(handle, rc);
+//    DWORD size = SizeofResource(handle, rc);
+//
+//    std::string data((char*)LockResource(rcData), size);
+//    FreeResource(rcData);
+//
+//    return data;
+//}
+//
+//void PatchT4_SteamDRM()
+//{
+//
+//
+//    // Replace encrypted .text segment
+//    DWORD size = 0x13E000;
+//    std::string data = GetBinaryResource(101);
+//    uncompress((unsigned char*)0x401000, &size, (unsigned char*)data.data(), data.size());
+//
+//    // Apply new entry point
+//    HMODULE hModule = GetModuleHandle(NULL);
+//    PIMAGE_DOS_HEADER header = (PIMAGE_DOS_HEADER)hModule;
+//    PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((DWORD)hModule + header->e_lfanew);
+//    ntHeader->OptionalHeader.AddressOfEntryPoint = 0x129DDC;
+//}
 
-    if (!CheckGame()) {
-        MessageBoxW(NULL, L"COD CLASSIC LOAD FAILED", L"Error", MB_OK | MB_ICONWARNING);
-        return;
-    }
+
+void InitHook() {
+    CheckGame();
+    //if (!CheckGame()) {
+    //    MessageBoxW(NULL, L"COD CLASSIC LOAD FAILED", L"Error", MB_OK | MB_ICONWARNING);
+    //    return;
+    //}
+
+
+
     auto pat = hook::pattern("53 8B 5C 24 ? 56 8B 74 24 ? 57 53");
         
         if(!pat.empty())
@@ -1428,6 +1479,39 @@ void InitHook() {
 
             });
     
+        pat = hook::pattern("FF 15 ? ? ? ? 8B 44 24 ? 8B 4C 24 ? 2B 4C 24");
+
+        if (!pat.empty()) {
+            // Borderless
+            printf(" HOOKING window thing\n");
+            static auto Borderless = safetyhook::create_mid(pat.get_first(), [](SafetyHookContext& ctx) {
+                printf("window thing noborder cvar: %p\n", r_noborder);
+                if (r_noborder && r_noborder->integer) {
+                    auto borderless_style = WS_POPUP | WS_VISIBLE;
+                    printf("first %p\n second %p\n", *(int*)(ctx.esp + 0x5C), *(int*)(ctx.esp + 0x4));
+                    *(int*)(ctx.esp + 0x5C) = borderless_style;
+                    *(int*)(ctx.esp + 0x4) = borderless_style;
+
+                }
+
+                });
+        }
+
+        pat = hook::pattern("8B 15 ? ? ? ? 8B 42 ? 5F");
+
+        if (!pat.empty()) {
+            static auto r_mode_auto_hook = safetyhook::create_mid(pat.get_first(), [](SafetyHookContext& ctx) {
+
+                unsigned int* width = (unsigned int*)ctx.esi;
+                unsigned int* height = (unsigned int*)ctx.edx;
+
+                if (r_mode_auto && r_mode_auto->integer) {
+                    *width = GetSystemMetrics(SM_CXSCREEN);
+                    *height = GetSystemMetrics(SM_CYSCREEN);
+                }
+
+                });
+        }
 
     char buffer[128]{};
     const char* buffertosee = "UNKNOWN";
@@ -1446,9 +1530,11 @@ void InitHook() {
     LoadHudShaderConfigs();
     printf("should call the cg func\n");
 
-    pat = hook::pattern("83 C4 ? 8D 4C 24 ? 68 ? ? ? ? 51 E8 ? ? ? ? 8D 54 24");
-    if(!pat.empty())
-        static auto AfterCvars = safetyhook::create_mid(pat.get_first(), sub_431CA0);
+    //pat = hook::pattern("83 C4 ? 8D 4C 24 ? 68 ? ? ? ? 51 E8 ? ? ? ? 8D 54 24");
+    //if(!pat.empty())
+    //    static auto AfterCvars = safetyhook::create_mid(pat.get_first(), sub_431CA0);
+
+    Memory::VP::InterceptCall(exe(0x4ADADF, 0x4C4EFF), cvar_init_og, Cvar_Init_hook);
 
     
 
