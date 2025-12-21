@@ -83,6 +83,7 @@ cvar_t* cg_fovscale;
 cvar_t* cg_fovfixaspectratio;
 cvar_t* cg_fixaspect;
 cvar_t* safeArea_horizontal;
+cvar_t* safeArea_vertical;
 cvar_t* r_noborder;
 cvar_t* r_mode_auto;
 cvar_t* player_sprintmult;
@@ -547,6 +548,25 @@ float get_safeArea_horizontal() {
 }
 
 
+
+float get_safeArea_vertical_hack() {
+    if (cg_fixaspect && !cg_fixaspect->integer) {
+        return 0.f;
+    }
+    if (!safeArea_vertical)
+        return 0.f;
+
+    // Clamp first, then invert
+    float clamped = std::clamp(safeArea_vertical->value, 0.f, 1.f);
+    return 1.f - clamped;
+}
+
+float process_height_hack_safe() {
+
+    return 240.f * get_safeArea_vertical_hack();
+
+}
+
 SafetyHookInline glOrtho_og{};
 //
 //
@@ -644,6 +664,7 @@ int Cvar_Init_hook() {
     cg_fovfixaspectratio = Cvar_Get((char*)"cg_fixaspectFOV", "1", CVAR_ARCHIVE);
     cg_fixaspect = Cvar_Get((char*)"cg_fixaspect", "1", CVAR_ARCHIVE);
     safeArea_horizontal = Cvar_Get((char*)"safeArea_horizontal", "1.0", CVAR_ARCHIVE);
+    safeArea_vertical = Cvar_Get((char*)"safeArea_vertical", "1.0", CVAR_ARCHIVE);
     printf("safearea ptr return %p size after %d\n", safeArea_horizontal, size_cvars);
     r_noborder = Cvar_Get((char*)"r_noborder", "0", CVAR_ARCHIVE);
     r_mode_auto = Cvar_Get((char*)"r_mode_auto", "0", CVAR_ARCHIVE);
@@ -1007,6 +1028,8 @@ bool ProcessItemAlignment_FromJSON(itemDef_t* item, const char* menuName,
     float halfWidth = process_width() * 0.5f;
     float safeX = get_safeArea_horizontal();
 
+    float height_hack = process_height_hack_safe() * 0.5f;
+
     // Apply horizontal alignment
     if (config->alignment.h_left) {
         item->window.rect.x += (-halfWidth) * safeX;
@@ -1023,11 +1046,11 @@ bool ProcessItemAlignment_FromJSON(itemDef_t* item, const char* menuName,
 
     // Apply vertical alignment (when process_height is available)
     if (config->alignment.v_top) {
-        // TODO: item->window.rect.y += (-halfHeight) * safeY;
+         item->window.rect.y += height_hack;
         state->wasModified = true;
     }
     else if (config->alignment.v_bottom) {
-        // TODO: item->window.rect.y += (halfHeight) * safeY;
+        item->window.rect.y -= height_hack;
         state->wasModified = true;
     }
     else if (config->alignment.v_center) {
@@ -1117,7 +1140,7 @@ void ProcessHudElemAlignment(hudelem_s* hud, HudAlignmentState* state) {
     float halfWidth = process_width() * 0.5f;
     float safeX = get_safeArea_horizontal();
     // float halfHeight = process_height() * 0.5f;
-    // float safeY = get_safeArea_vertical();
+    float height_hack = process_height_hack_safe();
 
     // Process horizontal alignment (alignx)
     switch (hud->alignx) {
@@ -1133,24 +1156,24 @@ void ProcessHudElemAlignment(hudelem_s* hud, HudAlignmentState* state) {
 
     case ALIGNX_CENTER:
         // No X adjustment for center
-        state->wasModified = true;
+        state->wasModified = false;
         break;
     }
 
     switch (hud->aligny) {
     case ALIGNY_TOP:
-        // hud->y += (int32_t)((-halfHeight) * safeY);
+        hud->y -= height_hack;
         state->wasModified = true;
         break;
 
     case ALIGNY_BOTTOM:
-        // hud->y += (int32_t)((halfHeight) * safeY);
+        hud->y += height_hack;
         state->wasModified = true;
         break;
 
     case ALIGNY_MIDDLE:
         // No Y adjustment for middle
-        state->wasModified = true;
+        state->wasModified = false;
         break;
     }
 }
@@ -1638,6 +1661,15 @@ void codDLLhooks(HMODULE handle) {
 
             };
 
+        auto isAlignY = [elem](const aligny_e alig_type) {
+            if (!elem) {
+                return false;
+            }
+
+            return elem->aligny == alig_type;
+
+            };
+
 
         // Hardcoded "black" OR config with stretch flag set
         bool shouldStretch = ((strcmp(hud_elem_shader_name, "black") == 0) && width >= 640 && height >= 480) ||
@@ -1665,6 +1697,13 @@ void codDLLhooks(HMODULE handle) {
             }
             else if (shaderConfig->alignment.h_right && isAlignX(ALIGNX_RIGHT)) {
                 *x += (halfWidth)*safeX;
+            }
+            float height_hack = process_height_hack_safe();
+            if (shaderConfig->alignment.v_bottom && !isAlignY(ALIGNY_BOTTOM)) {
+                y -= height_hack;
+            }
+            else if (shaderConfig->alignment.v_top && !isAlignY(ALIGNY_TOP)) {
+                y += height_hack;
             }
 
             // Add vertical when ready
@@ -1835,6 +1874,12 @@ void InitHook() {
                 }
 
                 });
+        }
+
+        pat = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? EB ? 57");
+
+        if (!pat.empty()) {
+            Memory::VP::Patch<uint32_t>(pat.get_first(4), WS_EX_LEFT);
         }
 
     char buffer[128]{};
