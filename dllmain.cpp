@@ -1807,24 +1807,36 @@ void InitHook() {
 
     //com_initd = safetyhook::create_inline(exe(0x00431CA0, 0x0043BC10), com_init_hook);
 
-    if (sp_mp(1)) {
+    auto pat = hook::pattern("FF 15 ? ? ? ? 8B 15 ? ? ? ? 52 E9");
 
-         Memory::VP::Read<uintptr_t>(exe(0x004D1A1C + 2),qglTexParameteri_ptr);
 
-        Memory::VP::Nop(0x004D1A1C, 6);
-        Memory::VP::Nop(0x004D1C3C, 6);
+    if (!pat.empty()) {
 
-        Memory::VP::InjectHook(0x004D1A1C, qglTexParameteri_aniso_hook1,Memory::VP::HookType::Call);
-        Memory::VP::InjectHook(0x004D1C3C, qglTexParameteri_aniso_hook2, Memory::VP::HookType::Call);
+        uintptr_t call1 = (uintptr_t)pat.get_first();
 
-        static auto GL_EXT_texture_filter_anisotropic_check = safetyhook::create_mid(exe(0x00504EAF), [](SafetyHookContext& ctx) {
-            GL_EXT_texture_filter_anisotropic_supported = ctx.eax != 0;
-            });
+        Memory::VP::Read<uintptr_t>(call1 + 2, qglTexParameteri_ptr);
 
-        Memory::VP::Nop(0x504ED7, 6);
+        Memory::VP::Nop(call1, 6);
+
+        pat = hook::pattern("FF 15 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 56");
+
+        if (!pat.empty()) {
+            Memory::VP::Nop(pat.get_first(), 6);
+
+            Memory::VP::InjectHook(call1, qglTexParameteri_aniso_hook1, Memory::VP::HookType::Call);
+            Memory::VP::InjectHook(pat.get_first(), qglTexParameteri_aniso_hook2, Memory::VP::HookType::Call);
+        }
+        pat = hook::pattern("FF 15 ? ? ? ? 83 C4 ? 5F 5E 5B 59 C3 68");
+        if (!pat.empty()) {
+            static auto GL_EXT_texture_filter_anisotropic_check = safetyhook::create_mid(pat.get_first(-40), [](SafetyHookContext& ctx) {
+                GL_EXT_texture_filter_anisotropic_supported = ctx.eax != 0;
+                });
+
+                Memory::VP::Nop(pat.get_first(), 6);
+        }
     }
 
-    auto pat = hook::pattern("53 8B 5C 24 ? 56 8B 74 24 ? 57 53");
+    pat = hook::pattern("53 8B 5C 24 ? 56 8B 74 24 ? 57 53");
         
         if(!pat.empty())
         Cvar_Set_og = safetyhook::create_inline(pat.get_first(), Cvar_Set);
