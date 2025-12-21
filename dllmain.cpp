@@ -799,8 +799,8 @@ void _cdecl crosshair_render_hook(float x, float y, float width, float height, i
     x -= ((width - orig_width) / 2.0f) * x_offset_mult;
     y -= ((height - orig_height) / 2.0f) * y_offset_mult;
 
-    printf("side=%d, x_off_mult=%.3f (%p), y_off_mult=%.3f (%p)\n",
-        side, x_offset_mult, &x_offset_mult, y_offset_mult, &y_offset_mult);
+    //printf("side=%d, x_off_mult=%.3f (%p), y_off_mult=%.3f (%p)\n",
+    //    side, x_offset_mult, &x_offset_mult, y_offset_mult, &y_offset_mult);
 
     cdecl_call<void>(crosshair_render_func, x, y, width, height, unk1, u1, u2, v1, rotation, shaderHandle);
 }
@@ -1038,7 +1038,7 @@ bool ProcessItemAlignment_FromJSON(itemDef_t* item, const char* menuName,
 
     float height_hack = process_height_hack_safe() * 0.5f;
 
-    // Apply horizontal alignment
+
     if (config->alignment.h_left) {
         item->window.rect.x += (-halfWidth) * safeX;
         state->wasModified = true;
@@ -1048,11 +1048,9 @@ bool ProcessItemAlignment_FromJSON(itemDef_t* item, const char* menuName,
         state->wasModified = true;
     }
     else if (config->alignment.h_center) {
-        // No X adjustment for center
-        state->wasModified = true;
+        state->wasModified = false;
     }
 
-    // Apply vertical alignment (when process_height is available)
     if (config->alignment.v_top) {
          item->window.rect.y += height_hack;
         state->wasModified = true;
@@ -1063,7 +1061,7 @@ bool ProcessItemAlignment_FromJSON(itemDef_t* item, const char* menuName,
     }
     else if (config->alignment.v_center) {
         // No Y adjustment for center
-        state->wasModified = true;
+        state->wasModified = false;
     }
 
     return state->wasModified;
@@ -1148,7 +1146,7 @@ void ProcessHudElemAlignment(hudelem_s* hud, HudAlignmentState* state) {
     float halfWidth = process_width() * 0.5f;
     float safeX = get_safeArea_horizontal();
     // float halfHeight = process_height() * 0.5f;
-    float height_hack = process_height_hack_safe();
+    float height_hack = process_height_hack_safe() * 0.5f;
 
     // Process horizontal alignment (alignx)
     switch (hud->alignx) {
@@ -1167,22 +1165,24 @@ void ProcessHudElemAlignment(hudelem_s* hud, HudAlignmentState* state) {
         state->wasModified = false;
         break;
     }
+    // required otherwise will break "black" shader
+    if ((hud->width < 640 && hud->height < 480)) {
+        switch (hud->aligny) {
+        case ALIGNY_TOP:
+            hud->y += height_hack;
+            state->wasModified = true;
+            break;
 
-    switch (hud->aligny) {
-    case ALIGNY_TOP:
-        hud->y -= height_hack;
-        state->wasModified = true;
-        break;
+        case ALIGNY_BOTTOM:
+            hud->y -= height_hack;
+            state->wasModified = true;
+            break;
 
-    case ALIGNY_BOTTOM:
-        hud->y += height_hack;
-        state->wasModified = true;
-        break;
+        case ALIGNY_MIDDLE:
 
-    case ALIGNY_MIDDLE:
-        // No Y adjustment for middle
-        state->wasModified = false;
-        break;
+            state->wasModified = false;
+            break;
+        }
     }
 }
 
@@ -1633,12 +1633,18 @@ void codDLLhooks(HMODULE handle) {
     if (!pat.empty()) {
         DrawObjectives = CreateMidHook(pat.get_first(), [](SafetyHookContext& ctx) {
             auto menuConfig = FindMenuConfig("Compass");
-            if (menuConfig && menuConfig->alignment.h_left) {
+            if (menuConfig) {
+                if (menuConfig->alignment.h_left) {
+                    float halfWidth = process_width() * 0.5f;
+                    float safeX = get_safeArea_horizontal();
 
-                float halfWidth = process_width() * 0.5f;
-                float safeX = get_safeArea_horizontal();
+                    ctx.ecx -= halfWidth * get_safeArea_horizontal();
+                }
 
-                ctx.ecx -= halfWidth * get_safeArea_horizontal();
+                if (menuConfig->alignment.v_bottom) {
+                    ctx.eax -= (int)(process_height_hack_safe() * 0.5f);
+                }
+
             }
 
             });
@@ -1680,9 +1686,11 @@ void codDLLhooks(HMODULE handle) {
 
 
         // Hardcoded "black" OR config with stretch flag set
-        bool shouldStretch = ((strcmp(hud_elem_shader_name, "black") == 0) && width >= 640 && height >= 480) ||
-            (shaderConfig && shaderConfig->alignment.stretch);
 
+        bool is_black_screen = (strcmp(hud_elem_shader_name, "black") == 0);
+
+        bool shouldStretch = (is_black_screen && (width >= 640 && height >= 480)) ||
+            (shaderConfig && shaderConfig->alignment.stretch);
         if (shouldStretch) {
 
             *x += -process_width();
@@ -1703,14 +1711,14 @@ void codDLLhooks(HMODULE handle) {
             if (shaderConfig->alignment.h_left && !isAlignX(ALIGNX_LEFT)) {
                 *x += (-halfWidth) * safeX;
             }
-            else if (shaderConfig->alignment.h_right && isAlignX(ALIGNX_RIGHT)) {
+            else if (shaderConfig->alignment.h_right && !isAlignX(ALIGNX_RIGHT)) {
                 *x += (halfWidth)*safeX;
             }
-            float height_hack = process_height_hack_safe();
-            if (shaderConfig->alignment.v_bottom && !isAlignY(ALIGNY_BOTTOM)) {
+            float height_hack = process_height_hack_safe() * 0.5f;
+            if (shaderConfig->alignment.v_bottom && !isAlignY(ALIGNY_BOTTOM) && !is_black_screen) {
                 y -= height_hack;
             }
-            else if (shaderConfig->alignment.v_top && !isAlignY(ALIGNY_TOP)) {
+            else if (shaderConfig->alignment.v_top && !isAlignY(ALIGNY_TOP) && !is_black_screen) {
                 y += height_hack;
             }
 
