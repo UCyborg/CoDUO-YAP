@@ -58,3 +58,10 @@ struct vmCvar_t
 	int integer;
 	char string[256];
 };
+
+typedef struct {
+	vmCvar_t* vmCvar;
+	char* cvarName;
+	char* defaultString;
+	int cvarFlags;
+} cvarTable_t;
