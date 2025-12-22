@@ -2040,7 +2040,8 @@ void InitHook() {
         MessageBoxW(NULL, L"COD CLASSIC LOAD FAILED", L"Error", MB_OK | MB_ICONWARNING);
         return;
     }
-
+    SetProcessDPIAware();
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     Cvar_getD = safetyhook::create_inline(LoadedGame->Cvar_Get_Addr, Cvar_get_Hook);
 
     InitializeDisplayModesForGame();
@@ -2240,6 +2241,12 @@ void InitHook() {
         Memory::VP::Patch<int*>(pat.get_first(2), resolution_modded);
     }
 
+    pat = hook::pattern("A1 ? ? ? ? 3D ? ? ? ? 56");
+    if (!pat.empty()) {
+        Memory::VP::Patch<int*>(pat.get_first(1), resolution_modded);
+    }
+    LOGPIXELSX;
+        LOGPIXELSY;
     SetUpFunctions();
     LoadMenuConfigs();
     LoadHudShaderConfigs();
