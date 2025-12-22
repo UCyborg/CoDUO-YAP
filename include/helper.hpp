@@ -1,4 +1,5 @@
-﻿
+﻿#pragma once
+
 #include <cmath>
 #include <string>
 #include <cstdint>
@@ -25,6 +26,7 @@
 #include <stdexcept>
 #include <cassert>
 
+
 template<typename T>
 concept Arithmetic = std::is_arithmetic_v<T>;
 
@@ -42,7 +44,7 @@ namespace Memory
 		VirtualProtect((LPVOID)(writeAddress), sizeof(T), oldProtect, &oldProtect);
 	}
 
-	void PatchBytes(std::uint8_t* address, const char* pattern, unsigned int numBytes)
+	inline void PatchBytes(std::uint8_t* address, const char* pattern, unsigned int numBytes)
 	{
 		DWORD oldProtect;
 		VirtualProtect((LPVOID)address, numBytes, PAGE_EXECUTE_READWRITE, &oldProtect);
@@ -50,7 +52,7 @@ namespace Memory
 		VirtualProtect((LPVOID)address, numBytes, oldProtect, &oldProtect);
 	}
 
-	bool PatchCallRel32(uint8_t* callSite, uint8_t* target, std::array<uint8_t, 5>* out_orig)
+	inline bool PatchCallRel32(uint8_t* callSite, uint8_t* target, std::array<uint8_t, 5>* out_orig)
 	{
 		if (!callSite || !target)
 		{
@@ -117,7 +119,7 @@ namespace Memory
 		return -1;
 	}
 
-	std::vector<int> pattern_to_byte(const char* pattern)
+	inline std::vector<int> pattern_to_byte(const char* pattern)
 	{
 		std::vector<int> bytes;
 		if (!pattern) return bytes;
@@ -174,13 +176,21 @@ namespace Memory
 		return bytes;
 	}
 
-	thread_local std::vector<std::string> g_last_scan_signatures;
+	inline thread_local std::vector<std::string> g_last_scan_signatures;
 
-	static std::unordered_map<std::string, std::vector<int>> s_pattern_cache;
+	inline std::unordered_map<std::string, std::vector<int>>& get_pattern_cache()
+	{
+		static std::unordered_map<std::string, std::vector<int>> s_pattern_cache;
+		return s_pattern_cache;
+	}
 
-	static std::mutex s_pattern_cache_mutex;
+	inline std::mutex& get_pattern_cache_mutex()
+	{
+		static std::mutex s_pattern_cache_mutex;
+		return s_pattern_cache_mutex;
+	}
 
-	static std::vector<int> get_pattern_bytes_cached(const char* pattern)
+	inline std::vector<int> get_pattern_bytes_cached(const char* pattern)
 	{
 		if (!pattern)
 		{
@@ -189,23 +199,23 @@ namespace Memory
 
 		std::string key(pattern);
 		{
-			std::lock_guard<std::mutex> lk(s_pattern_cache_mutex);
-			auto it = s_pattern_cache.find(key);
-			if (it != s_pattern_cache.end()) return it->second;
+			std::lock_guard<std::mutex> lk(get_pattern_cache_mutex());
+			auto it = get_pattern_cache().find(key);
+			if (it != get_pattern_cache().end()) return it->second;
 		}
 
 		std::vector<int> bytes = pattern_to_byte(pattern);
 		{
-			std::lock_guard<std::mutex> lk(s_pattern_cache_mutex);
-			s_pattern_cache.try_emplace(key, bytes);
+			std::lock_guard<std::mutex> lk(get_pattern_cache_mutex());
+			get_pattern_cache().try_emplace(key, bytes);
 		}
 
 		return bytes;
 	}
 
-	std::uint8_t* PatternScan(void* module, const char* signature)
+	inline std::uint8_t* PatternScan(void* module, const char* signature)
 	{
-		if (!module || !signature) 
+		if (!module || !signature)
 		{
 			return nullptr;
 		}
@@ -339,7 +349,7 @@ namespace Memory
 					{
 
 					}
-					else 
+					else
 					{
 						std::uint8_t* memchr_search_start = rStart + anchor_index;
 
@@ -395,7 +405,8 @@ namespace Memory
 		return nullptr;
 	}
 
-	template<typename... Sigs, typename = std::enable_if_t<(std::is_convertible_v<Sigs, const char*> && ...)>>std::vector<std::uint8_t*> PatternScan(void* module, const char* firstSignature, Sigs... otherSignatures)
+	template<typename... Sigs, typename = std::enable_if_t<(std::is_convertible_v<Sigs, const char*> && ...)>>
+	std::vector<std::uint8_t*> PatternScan(void* module, const char* firstSignature, Sigs... otherSignatures)
 	{
 		g_last_scan_signatures.clear();
 
@@ -417,7 +428,8 @@ namespace Memory
 		return results;
 	}
 
-	template<typename... Args, typename = std::enable_if_t<!std::conjunction_v<std::is_convertible<std::decay_t<Args>, const char*>...>, int>>std::vector<std::uint8_t*> PatternScan(void* firstModule, Args... rest)
+	template<typename... Args, typename = std::enable_if_t<!std::conjunction_v<std::is_convertible<std::decay_t<Args>, const char*>...>, int>>
+	std::vector<std::uint8_t*> PatternScan(void* firstModule, Args... rest)
 	{
 		g_last_scan_signatures.clear();
 
@@ -428,7 +440,7 @@ namespace Memory
 		items.reserve(1 + sizeof...(rest));
 
 		auto make_variant = [](auto&& v) -> Item
-		{
+			{
 				using T = std::decay_t<decltype(v)>;
 
 				if constexpr (std::is_convertible_v<T, void*>)
@@ -443,7 +455,7 @@ namespace Memory
 				{
 					static_assert(std::is_convertible_v<T, void*> || std::is_convertible_v<T, const char*>, "PatternScan(...) supports only module pointers and const char* signatures");
 				}
-		};
+			};
 
 		items.emplace_back(reinterpret_cast<void*>(firstModule));
 
@@ -518,9 +530,9 @@ namespace Memory
 			}
 
 			futures.emplace_back(std::async(std::launch::async, [m = t.module, s = t.sig]() -> std::uint8_t*
-			{
-				return PatternScan(m, s);
-			}));
+				{
+					return PatternScan(m, s);
+				}));
 		}
 
 		std::vector<std::uint8_t*> results;
@@ -607,7 +619,7 @@ namespace Memory
 		if constexpr (std::is_signed_v<PartT>)
 		{
 			std::memcpy(&u, &value, sizeof(u));
-		}			
+		}
 		else
 		{
 			u = static_cast<UnsignedPart>(value);
@@ -618,7 +630,7 @@ namespace Memory
 		target = (target & ~shifted_mask) | value_masked;
 	}
 
-	static HMODULE GetThisDllHandle()
+	inline HMODULE GetThisDllHandle()
 	{
 		MEMORY_BASIC_INFORMATION info;
 
@@ -629,7 +641,7 @@ namespace Memory
 		return len ? (HMODULE)info.AllocationBase : NULL;
 	}
 
-	std::uint32_t ModuleTimestamp(void* module)
+	inline std::uint32_t ModuleTimestamp(void* module)
 	{
 		auto dosHeader = (PIMAGE_DOS_HEADER)module;
 
@@ -638,7 +650,7 @@ namespace Memory
 		return ntHeaders->FileHeader.TimeDateStamp;
 	}
 
-	std::uint8_t* GetAbsolute(std::uint8_t* address) noexcept
+	inline std::uint8_t* GetAbsolute(std::uint8_t* address) noexcept
 	{
 		if (address == nullptr)
 		{
@@ -651,30 +663,30 @@ namespace Memory
 
 		return absoluteAddress;
 	}
-	
-	static HMODULE GetHandle(const std::initializer_list<std::string>& moduleNames, unsigned int retryDelayMs = 200, int maxAttempts = 0, bool loggingEnabled = true)
+
+	inline HMODULE GetHandle(const std::initializer_list<std::string>& moduleNames, unsigned int retryDelayMs = 200, int maxAttempts = 0, bool loggingEnabled = true)
 	{
 		int attempts = 0;
 
 		while (true)
 		{
-			for (const auto &name : moduleNames)
+			for (const auto& name : moduleNames)
 			{
 				HMODULE h = GetModuleHandleA(name.c_str());
-				
+
 				if (h != nullptr)
 				{
 					if (loggingEnabled)
 					{
 
 					}
-					
+
 					return h;
 				}
 			}
 
 			++attempts;
-			
+
 			if (maxAttempts > 0 && attempts >= maxAttempts)
 			{
 				if (loggingEnabled)
@@ -685,22 +697,22 @@ namespace Memory
 						if (it != moduleNames.begin()) joined += ", ";
 						joined += *it;
 					}
-					
+
 				}
-				
+
 				return nullptr;
 			}
-			
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
 		}
 	}
 
-	static HMODULE GetHandle(const std::string& moduleName, unsigned int retryDelayMs = 200, int maxAttempts = 0, bool loggingEnabled = true)
+	inline HMODULE GetHandle(const std::string& moduleName, unsigned int retryDelayMs = 200, int maxAttempts = 0, bool loggingEnabled = true)
 	{
 		return GetHandle(std::initializer_list<std::string>{moduleName}, retryDelayMs, maxAttempts, loggingEnabled);
 	}
 
-	static std::string GetModuleFilePathUtf8(HMODULE hModule)
+	inline std::string GetModuleFilePathUtf8(HMODULE hModule)
 	{
 		if (hModule == nullptr)
 		{
@@ -753,15 +765,15 @@ namespace Memory
 		return out;
 	}
 
-	static std::string GetModuleName(HMODULE hModule)
+	inline std::string GetModuleName(HMODULE hModule)
 	{
 		std::string full = GetModuleFilePathUtf8(hModule);
-		
+
 		if (full.empty())
 		{
 			return {};
 		}
-		
+
 		try
 		{
 			return std::filesystem::path(full).filename().string();
@@ -769,12 +781,12 @@ namespace Memory
 		catch (...)
 		{
 			auto pos = full.find_last_of("\\/");
-			
+
 			if (pos == std::string::npos)
 			{
 				return full;
 			}
-			
+
 			return full.substr(pos + 1);
 		}
 	}
@@ -853,7 +865,7 @@ namespace Memory
 
 namespace Util
 {
-	std::pair<int, int> GetPhysicalDesktopDimensions()
+	inline std::pair<int, int> GetPhysicalDesktopDimensions()
 	{
 		if (DEVMODE devMode{ .dmSize = sizeof(DEVMODE) }; EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &devMode))
 			return { devMode.dmPelsWidth, devMode.dmPelsHeight };
@@ -861,7 +873,7 @@ namespace Util
 		return {};
 	}
 
-	std::string wstring_to_string(const wchar_t* wstr)
+	inline std::string wstring_to_string(const wchar_t* wstr)
 	{
 		size_t len = std::wcslen(wstr);
 		std::string str(len, '\0');
@@ -870,7 +882,7 @@ namespace Util
 		return str;
 	}
 
-	bool stringcmp_caseless(const std::string& str1, const std::string& str2)
+	inline bool stringcmp_caseless(const std::string& str1, const std::string& str2)
 	{
 		if (str1.size() != str2.size())
 		{
@@ -878,9 +890,9 @@ namespace Util
 		}
 
 		return std::equal(str1.begin(), str1.end(), str2.begin(), [](char a, char b)
-		{
-			return std::tolower(a) == std::tolower(b);
-		});
+			{
+				return std::tolower(a) == std::tolower(b);
+			});
 	}
 }
 

@@ -45,6 +45,9 @@
     <ClInclude Include="include\helper.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="cevar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -60,6 +63,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Zydis.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cevars.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

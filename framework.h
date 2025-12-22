@@ -4,3 +4,5 @@
 // Windows Header Files
 #include <windows.h>
 #include "buildnumber.h"
+
+#include <helper.hpp>

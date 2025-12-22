@@ -1,11 +1,11 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
+
 #include "pch.h"
 //#include "MinHook.h"
 #include <windows.h>
 #include <iostream>
 #include "Hooking.Patterns.h"
 #include "safetyhook.hpp"
-//#pragma comment(lib, "libMinHook.x86.lib")
 #include "shared.h"
 
 #include "MemoryMgr.h"
@@ -22,8 +22,9 @@
 #include "nlohmann/json.hpp"
 
 #include "Hooking.Patterns.h"
+#include "cevar.h"
 
-#include <helper.hpp>
+
 
 #define SCREEN_WIDTH        640
 #define SCREEN_HEIGHT       480
@@ -35,7 +36,7 @@
 static std::vector<std::unique_ptr<SafetyHookInline>> g_inlineHooks;
 static std::vector<std::unique_ptr<SafetyHookMid>> g_midHooks;
 
-
+static char charbuffer[2048]{};
 
 template<typename T, typename Fn>
 SafetyHookInline* CreateInlineHook(T target, Fn destination, SafetyHookInline::Flags flags = SafetyHookInline::Default) {
@@ -85,6 +86,9 @@ inline Ret thiscall_call(uintptr_t addr, Args... args) {
 typedef cvar_t* (__cdecl* Cvar_GetT)(const char* var_name, const char* var_value, int flags);
 Cvar_GetT Cvar_Get = (Cvar_GetT)NULL;
 
+typedef int (__cdecl* Com_PrintfT)(const char* format, ...);
+Com_PrintfT Com_Printf = (Com_PrintfT)NULL;
+
 // SP Only
 
 cvar_t* g_save_allowbadchecksum;
@@ -92,11 +96,11 @@ cvar_t* g_save_allowbadchecksum;
 // cvars
 cvar_t* cg_fov;
 cvar_t* cg_fovscale_ads;
-cvar_t* cg_fov_fix_lowfovads;
+cevar_t* cg_fov_fix_lowfovads;
 cvar_t* cg_fovMin;
 cvar_t* cg_fovscale;
 cvar_t* cg_fovfixaspectratio;
-cvar_t* cg_fixaspect;
+cevar_t* cg_fixaspect;
 cvar_t* safeArea_horizontal;
 cvar_t* safeArea_vertical;
 cvar_t* r_noborder;
@@ -452,7 +456,7 @@ LPVOID GetModuleEndAddress(HMODULE hModule) {
 
 // For glOrtho - adjusts screen-space ortho projection
 double process_widths(double width = 0) {
-    if (cg_fixaspect && !cg_fixaspect->integer) {
+    if (cg_fixaspect && !cg_fixaspect->base->integer) {
         return 0.f;
     }
     float x = (float)*(int*)LoadedGame->X_res_Addr;
@@ -469,7 +473,7 @@ double process_widths(double width = 0) {
 // For game functions - adjusts game's internal 480-based coordinate system
 double process_width(double width = 0) {
 
-    if (cg_fixaspect && !cg_fixaspect->integer) {
+    if (cg_fixaspect && !cg_fixaspect->base->integer) {
         return 0.f;
     }
 
@@ -561,7 +565,7 @@ BOOL __stdcall FreeLibraryHook(HMODULE hLibModule) {
 }
 
 float get_safeArea_horizontal() {
-    if (cg_fixaspect && !cg_fixaspect->integer) {
+    if (cg_fixaspect && !cg_fixaspect->base->integer) {
         return 1.f;
     }
     float printing = safeArea_horizontal != 0 ? safeArea_horizontal->value : 1.f;
@@ -576,7 +580,7 @@ float get_safeArea_horizontal() {
 
 
 float get_safeArea_vertical_hack() {
-    if (cg_fixaspect && !cg_fixaspect->integer) {
+    if (cg_fixaspect && !cg_fixaspect->base->integer) {
         return 0.f;
     }
     if (!safeArea_vertical)
@@ -585,6 +589,18 @@ float get_safeArea_vertical_hack() {
     // Clamp first, then invert
     float clamped = std::clamp(safeArea_vertical->value, 0.f, 1.f);
     return 1.f - clamped;
+}
+
+int resolution_modded[2];
+
+void Resolution_Static_mod(cvar_s* cvar, const char* old_value = "") {
+    int* res = (int*)LoadedGame->X_res_Addr;
+    if (cvar && cvar->integer) {
+        resolution_modded[0] = res[1] * STANDARD_ASPECT;
+    }
+    else {
+        resolution_modded[0] = res[0];
+    }
 }
 
 float process_height_hack_safe() {
@@ -690,9 +706,10 @@ int Cvar_Init_hook() {
     cg_fovMin = Cvar_Get((char*)"cg_fovMin", "1.0", CVAR_ARCHIVE);
     cg_fovscale = Cvar_Get((char*)"cg_fovscale", "1.0", CVAR_ARCHIVE);
     cg_fovscale_ads = Cvar_Get((char*)"cg_fovscale_ads", "1.0", CVAR_ARCHIVE);
-    cg_fov_fix_lowfovads = Cvar_Get((char*)"cg_fov_fix_lowfovads", "0", CVAR_ARCHIVE);
+
+    cg_fov_fix_lowfovads = Cevar_Get((char*)"cg_fov_fix_lowfovads", 0, CVAR_ARCHIVE,0,2);
     cg_fovfixaspectratio = Cvar_Get((char*)"cg_fixaspectFOV", "1", CVAR_ARCHIVE);
-    cg_fixaspect = Cvar_Get((char*)"cg_fixaspect", "1", CVAR_ARCHIVE);
+    cg_fixaspect = Cevar_Get((char*)"cg_fixaspect", 0, CVAR_ARCHIVE,0,2, Resolution_Static_mod);
     safeArea_horizontal = Cvar_Get((char*)"safeArea_horizontal", "1.0", CVAR_ARCHIVE);
     safeArea_vertical = Cvar_Get((char*)"safeArea_vertical", "1.0", CVAR_ARCHIVE);
     printf("safearea ptr return %p size after %d\n", safeArea_horizontal, *size_cvars);
@@ -793,7 +810,7 @@ int __cdecl CG_DrawPic(float a1, float a2, float a3, float a4, int a5) {
 static float adjustments[10];
 
 void _cdecl crosshair_render_hook(float x, float y, float width, float height, int unk1, float u1, float u2, float v1, float rotation, int shaderHandle) {
-    if (cg_fixaspect && cg_fixaspect->integer == 2) {
+    if (cg_fixaspect && cg_fixaspect->base->integer == 2) {
         int side;
         __asm mov side, esi
 
@@ -811,7 +828,7 @@ void _cdecl crosshair_render_hook(float x, float y, float width, float height, i
         float orig_height = height;
 
         bool is_horizontal = (side == 0 || side == 2);
-        if(cg_fixaspect->integer == 3)
+        if(cg_fixaspect->base->integer == 3)
         printf("horz %p %p vert %p %p\n", &horizontal_width_mult, &horizontal_height_mult, &vertical_width_mult, &vertical_height_mult);
 
         if (is_horizontal) {
@@ -1607,13 +1624,13 @@ int __cdecl SCR_DrawString_hook_possible1(float x, float y, float width, float h
 
 void HandleWeaponADS_hack(float* current_weapon_fov) {
     if (cg_fov) {
-        if (cg_fov_fix_lowfovads && cg_fov_fix_lowfovads->integer == 1) {
+        if (cg_fov_fix_lowfovads && cg_fov_fix_lowfovads->base->integer == 1) {
             if (cg_fov->value < *current_weapon_fov) {
                 float value = cg_fov->value / 80.f;
                 *current_weapon_fov *= value;
             }
         }
-        else if (cg_fov_fix_lowfovads && cg_fov_fix_lowfovads->integer >= 2) {
+        else if (cg_fov_fix_lowfovads && cg_fov_fix_lowfovads->base->integer >= 2) {
             if (cg_fov->value < 80.f) {
                 float value = cg_fov->value / 80.f;
                 *current_weapon_fov *= value;
@@ -1836,39 +1853,82 @@ void codDLLhooks(HMODULE handle) {
     }
 }
 
-int resolution_modded[2];
-
-void Resolution_Static_mod(cvar_s* cvar) {
-    int* res = (int*)LoadedGame->X_res_Addr;
-    if (cvar && cvar->integer) {
-        resolution_modded[0] = res[1] * STANDARD_ASPECT;
-    }
-    else {
-        resolution_modded[0] = res[0];
-    }
-}
 
 
 SafetyHookInline Cvar_Set_og;
 cvar_s* __cdecl Cvar_Set(const char* cvar_name, const char* value, BOOL force) {
-    auto result = Cvar_Set_og.ccall<cvar_s*>(cvar_name, value, force);
-
-    if (cvar_name && value) {
-        //printf("cvar_name %s value %s cvar ptr %p\n", cvar_name, value, result);
+    if (!cvar_name || !value) {
+        return Cvar_Set_og.ccall<cvar_s*>(cvar_name, value, force);
     }
 
-    if (result == safeArea_horizontal) {
-        StaticInstructionPatches(NULL,false);
-    } 
-    // If I need another one of these i'll have to make a map lol
-    else if (result == cg_fixaspect) {
-        Resolution_Static_mod(result);
+    // Try to find existing cvar to get cevar
+    cvar_t* existing_cvar = Cvar_Find(cvar_name);
+    cevar_t* cevar = existing_cvar ? Cevar_FromCvar(existing_cvar) : nullptr;
+
+    std::string clamped_value = value;
+    const char* oldValue = existing_cvar ? existing_cvar->string : nullptr;
+
+    // Apply limits if cevar exists and has limits
+    if (cevar && cevar->limits.has_limits) {
+        if (cevar->limits.is_float) {
+            float val = (float)atof(value);
+            float clamped = std::clamp(val, cevar->limits.f.min, cevar->limits.f.max);
+
+            // Only clamp if different
+            if (val != clamped) {
+                char buffer[32];
+                sprintf(buffer, "%f", clamped);
+                clamped_value = buffer;
+                Com_Printf("^3[CEVAR]^7 '%s' clamped to %.2f (valid range: %.2f - %.2f)\n",
+                    cvar_name, clamped, cevar->limits.f.min, cevar->limits.f.max);
+            }
+        }
+        else {
+            int val = atoi(value);
+            int clamped = std::clamp(val, cevar->limits.i.min, cevar->limits.i.max);
+
+            // Only clamp if different
+            if (val != clamped) {
+                char buffer[32];
+                sprintf(buffer, "%d", clamped);
+                clamped_value = buffer;
+                Com_Printf("^3[CEVAR]^7 '%s' clamped to %d (valid range: %d - %d)\n",
+                    cvar_name, clamped, cevar->limits.i.min, cevar->limits.i.max);
+            }
+        }
     }
 
-    return result;
 
+    auto cvar = Cvar_Set_og.ccall<cvar_s*>(cvar_name, clamped_value.c_str(), force);
 
+    // Check if value actually changed
+    bool value_changed = false;
+    if (cvar) {
+        if (cvar->flags & CVAR_LATCH) {
+            // Latched cvars update latchedString, not string
+            if (cvar->latchedString && oldValue) {
+                value_changed = (strcmp(cvar->latchedString, oldValue) != 0);
+            }
+        }
+        else {
+            // Normal cvars update string immediately
+            if (cvar->string && oldValue) {
+                value_changed = (strcmp(cvar->string, oldValue) != 0);
+            }
+        }
+    }
 
+    // Trigger callback if value changed
+    if (value_changed && cevar && cevar->callback) {
+        cevar->callback(cvar, oldValue);
+    }
+
+    // Special hardcoded callbacks
+    if (cvar == safeArea_horizontal) {
+        StaticInstructionPatches(NULL, false);
+    }
+
+    return cvar;
 }
 
 SafetyHookInline SCR_AdjustFrom640_OG;
@@ -2008,6 +2068,64 @@ void InitHook() {
         }
     }
 
+    pat = hook::pattern("E8 ? ? ? ? 8B 76 ? 83 C4 ? 85 F6 74");
+
+    if (!pat.empty()) {
+        Memory::VP::ReadCall(pat.get_first(), Com_Printf);
+
+    #define FLAG_COLOR "^5"
+
+        auto static print_flags = safetyhook::create_mid(pat.get_first(5), [](SafetyHookContext& ctx) {
+            cvar_s* thiscvar = (cvar_s*)ctx.esi;
+            if (thiscvar) {
+                int flags = thiscvar->flags;
+                static char buffer[2048];
+                buffer[0] = '\0';
+                bool first = true;
+
+                // Print flags
+                if (flags & CVAR_ARCHIVE) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "Archive"); first = false; }
+                if (flags & CVAR_USERINFO) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "UserInfo"); first = false; }
+                if (flags & CVAR_SERVERINFO) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "ServerInfo"); first = false; }
+                if (flags & CVAR_SYSTEMINFO) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "SystemInfo"); first = false; }
+                if (flags & CVAR_INIT) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "Init"); first = false; }
+                if (flags & CVAR_LATCH) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "Latch"); first = false; }
+                if (flags & CVAR_ROM) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "Rom"); first = false; }
+                if (flags & CVAR_USER_CREATED) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "UserCreated"); first = false; }
+                if (flags & CVAR_TEMP) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "Temp"); first = false; }
+                if (flags & CVAR_CHEAT) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "Cheat"); first = false; }
+                if (flags & CVAR_NORESTART) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "NoRestart"); first = false; }
+                if (flags & CVAR_WOLFINFO) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "WolfInfo"); first = false; }
+                if (flags & CVAR_UNSAFE) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "Unsafe"); first = false; }
+                if (flags & CVAR_SERVERINFO_NOUPDATE) { if (!first) strcat(buffer, "^7, "); strcat(buffer, FLAG_COLOR "ServerInfoNoUpdate"); first = false; }
+
+                // Check for cevar
+                cevar_t* cevar = Cevar_FromCvar(thiscvar);
+                if (cevar) {
+                    if (!first) strcat(buffer, "^7, ");
+                    strcat(buffer, "^2CEVAR");  // Green color for CEVAR
+                    first = false;
+                }
+
+                Com_Printf(" %s^7\n", buffer);
+
+                // Print limits on separate line if they exist
+                if (cevar && cevar->limits.has_limits) {
+                    if (cevar->limits.is_float) {
+                        Com_Printf("  ^3Limits:^7 %.2f ^7to^7 %.2f\n",
+                            cevar->limits.f.min, cevar->limits.f.max);
+                    }
+                    else {
+                        Com_Printf("  ^3Limits:^7 %d ^7to^7 %d\n",
+                            cevar->limits.i.min, cevar->limits.i.max);
+                    }
+                }
+            }
+            });
+        // remove \n from ````"\"%s\" is:\"%s^7\" default:\"%s^7\"\n````
+        Memory::VP::Patch((*(uintptr_t*)pat.get_first(-4)) +29, 0);
+    }
+
     pat = hook::pattern("53 8B 5C 24 ? 56 8B 74 24 ? 57 53");
         
         if(!pat.empty())
@@ -2081,8 +2199,8 @@ void InitHook() {
     pat = hook::pattern("68 ? ? ? ? 56 FF 15 ? ? ? ? 83 C4 ? 5F");
     if (!pat.empty()) {
         static auto R_init_end = safetyhook::create_mid(pat.get_first(), [](SafetyHookContext& ctx) {
-
-            Resolution_Static_mod(cg_fixaspect);
+            if(cg_fixaspect)
+            Resolution_Static_mod(cg_fixaspect->base);
 
             });
     }

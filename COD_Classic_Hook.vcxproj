@@ -167,6 +167,7 @@ popd</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="cevar.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Hooking.Patterns.h" />
     <ClInclude Include="include\helper.hpp" />
@@ -178,6 +179,7 @@ popd</Command>
     <ClInclude Include="Zydis.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="cevars.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Hooking.Patterns.cpp" />
     <ClCompile Include="pch.cpp">

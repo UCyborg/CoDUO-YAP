@@ -48,20 +48,7 @@ enum qboolean
 	qfalse = 0x0,
 	qtrue = 0x1,
 };
-typedef struct cvar_s
-{
-	char* name;
-	char* string;
-	char* resetString;
-	char* latchedString;
-	int flags;
-	qboolean modified;
-	int modificationCount;
-	float value;
-	int integer;
-	struct cvar_s* next;
-	struct cvar_s* hashNext;
-} cvar_t;
+
 typedef int cvarHandle_t;
 struct vmCvar_t
 {
