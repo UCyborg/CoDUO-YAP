@@ -818,11 +818,11 @@ void _cdecl crosshair_render_hook(float x, float y, float width, float height, i
     int side;
     __asm mov side, esi
     bool is_horizontal = !(side == 0 || side == 2);
-
-    float og_x = x;
-    float og_y = y;
+    // HACK HACK HACK HACK TODO: PLEASE FIXME IT WORKS AND LOOKS NICE BUT I HATE THIS -Clippy95
+    static float stored_right_distance = 0.0f;
 
     if (is_horizontal) {
+        float original_x = x;
         float temp_x = x, temp_y = y;
         float temp_width = width, temp_height = height;
 
@@ -831,21 +831,20 @@ void _cdecl crosshair_render_hook(float x, float y, float width, float height, i
         x = temp_x + (temp_height - temp_width) / 2.0f;
         y = temp_y + (temp_width - temp_height) / 2.0f;
 
-        // Use a symmetric correction for both sides
-        // At 21:9, we need +4.0 for right and -4.0 for left
-        // That's 1.0 * screenXScale
-        float aspect_correction = (*cg_screenXScale);
-        static cevar_s* cg_crosshair_fuck;
-        if (!cg_crosshair_fuck)
-            cg_crosshair_fuck = Cevar_Get("cg_crosshair_fuck", 0, 0);
-        if (GetAspectRatio() > STANDARD_ASPECT && cg_crosshair_fuck && cg_crosshair_fuck->base->integer) {
-            if (side == 1) {
-                x += aspect_correction;
-            }
-            else if (side == 3) {
-                x -= aspect_correction;
-            }
+        if (side == 1) {
+            stored_right_distance = fabsf(original_x - 320.0f);
         }
+
+
+        float aspect_correction = stored_right_distance * ((*cg_screenXScale) - (*cg_screenYScale));
+
+        if (side == 1) {
+            x += aspect_correction;
+        }
+        else if (side == 3) {
+            x -= aspect_correction;
+        }
+
         width = temp_width;
         height = temp_height;
     }
