@@ -78,6 +78,7 @@ cvar_t* cg_fovscale_ads;
 cevar_t* cg_fov_fix_lowfovads;
 cevar_t* cg_fovMin;
 cvar_t* cg_fovscale;
+cevar_t* cg_hudelem_alignhack;
 cvar_t* cg_fovfixaspectratio;
 cevar_t* cg_fixaspect;
 cvar_t* safeArea_horizontal;
@@ -705,6 +706,8 @@ int Cvar_Init_hook() {
         g_save_allowbadchecksum = Cvar_Get("g_save_allowbadchecksum", "0", 1);
     }
 
+    cg_hudelem_alignhack = Cevar_Get("cg_hudelem_alignhack", 0, CVAR_ARCHIVE, 0);
+
     return result;
 }
 
@@ -1185,7 +1188,7 @@ struct HudAlignmentState {
 };
 
 void ProcessHudElemAlignment(hudelem_s* hud, HudAlignmentState* state) {
-    if (!hud) return;
+    if (!hud || !cg_hudelem_alignhack || !cg_hudelem_alignhack->base || !cg_hudelem_alignhack->base->integer) return;
 
     // Save original state
     state->originalAlignX = hud->alignx;
@@ -1254,11 +1257,7 @@ int __fastcall DrawSingleHudElem2dHook(hudelem_s* thisa) {
     HudAlignmentState state = { };
 
     if (thisa) {
-        //printf("type? %d x %d y %d alignx %d aligny %d\n",
-        //    thisa->type, thisa->x, thisa->y,
-        //    thisa->alignx, thisa->aligny);
 
-        // Process alignment adjustments
         ProcessHudElemAlignment(thisa, &state);
     }
 
