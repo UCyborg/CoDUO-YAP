@@ -1,5 +1,8 @@
 #pragma once
 
+#pragma warning (disable : 4244)
+#pragma warning (disable : 4477)
+
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files
 #include <windows.h>
@@ -30,5 +33,3 @@ template<typename Ret, typename... Args>
 inline Ret thiscall_call(uintptr_t addr, Args... args) {
     return reinterpret_cast<Ret(__thiscall*)(Args...)>(addr)(args...);
 }
-
-uintptr_t exe(uintptr_t CODUOSP, uintptr_t CODUOMP = 0);

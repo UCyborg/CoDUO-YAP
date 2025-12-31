@@ -327,3 +327,16 @@ struct keyCatchers_s {
     uint32_t message : 1;
     uint32_t cgame : 1;
 };
+
+typedef enum {
+    FS_READ,
+    FS_WRITE,
+    FS_APPEND,
+    FS_APPEND_SYNC
+} fsMode_t;
+
+typedef enum {
+    FS_SEEK_CUR,
+    FS_SEEK_END,
+    FS_SEEK_SET
+} fsOrigin_t;

@@ -7,6 +7,7 @@
 #include <hidusage.h>
 
 #include "Hooking.Patterns.h"
+#include <game.h>
 
 uintptr_t MessageMouse_addr;
 

@@ -17,16 +17,16 @@ import game;
 
 #include "structs.h"
 
-#include <filesystem>
-#include <fstream>
-#include "nlohmann/json.hpp"
+
 
 #include "Hooking.Patterns.h"
 #include "cevar.h"
 #include "rinput.h"
 #include "GMath.h"
 
-
+#include <filesystem>
+#include <fstream>
+#include "nlohmann/json.hpp"
 
 #define SCREEN_WIDTH        640
 #define SCREEN_HEIGHT       480
@@ -37,6 +37,11 @@ import game;
 
 static std::vector<std::unique_ptr<SafetyHookInline>> g_inlineHooks;
 static std::vector<std::unique_ptr<SafetyHookMid>> g_midHooks;
+
+#include <unordered_map>
+#include "game/game.h"
+#include <component_loader.h>
+
 
 static char charbuffer[2048]{};
 
@@ -65,9 +70,6 @@ SafetyHookMid* CreateMidHook(T target, safetyhook::MidHookFn destination, safety
 typedef cvar_t* (__cdecl* Cvar_GetT)(const char* var_name, const char* var_value, int flags);
 Cvar_GetT Cvar_Get = (Cvar_GetT)NULL;
 
-typedef int (__cdecl* Com_PrintfT)(const char* format, ...);
-Com_PrintfT Com_Printf = (Com_PrintfT)NULL;
-
 // SP Only
 
 cvar_t* g_save_allowbadchecksum;
@@ -85,6 +87,7 @@ cvar_t* safeArea_horizontal;
 cvar_t* safeArea_vertical;
 cvar_t* r_noborder;
 cevar_t* r_mode_auto;
+
 cvar_t* player_sprintmult;
 
 cvar_t* hook_shortversion;
@@ -92,7 +95,6 @@ cvar_t* hook_shortversion;
 cvar_t* hook_version;
 
 cevar_t* r_ext_texture_filter_anisotropic;
-
 
 void codDLLhooks(HMODULE handle);
 
@@ -157,16 +159,14 @@ UO_MP,
 
 COD_Classic_Version *LoadedGame = NULL;
 
-uintptr_t cg_game_offset = 0;
-uintptr_t ui_offset = 0;
-uintptr_t game_offset = 0;
+
 
 #define CGAME_OFF(x) (cg_game_offset + (x - 0x30000000))
 #define GAME_OFF(x) (game_offset + (x - 0x20000000))
 
 #define UI_OFF(x) (ui_offset + (x - 0x40000000))
 
-SAFETYHOOK_NOINLINE uintptr_t cg(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
+uintptr_t cg(uintptr_t CODUOSP, uintptr_t CODUOMP) {
 
     if (cg_game_offset == NULL)
         return NULL;
@@ -185,7 +185,7 @@ SAFETYHOOK_NOINLINE uintptr_t cg(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
 
 }
 
-SAFETYHOOK_NOINLINE uintptr_t ui(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
+uintptr_t ui(uintptr_t CODUOSP, uintptr_t CODUOMP) {
 
     if (ui_offset == NULL)
         return NULL;
@@ -204,7 +204,7 @@ SAFETYHOOK_NOINLINE uintptr_t ui(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
 
 }
 
-SAFETYHOOK_NOINLINE uintptr_t g(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
+uintptr_t g(uintptr_t CODUOSP, uintptr_t CODUOMP) {
 
     if (ui_offset == NULL)
         return NULL;
@@ -225,7 +225,7 @@ SAFETYHOOK_NOINLINE uintptr_t g(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
 
 
 
-SAFETYHOOK_NOINLINE uintptr_t exe(uintptr_t CODUOSP, uintptr_t CODUOMP) {
+uintptr_t exe(uintptr_t CODUOSP, uintptr_t CODUOMP) {
 
     if (!LoadedGame)
         return NULL;
@@ -241,7 +241,7 @@ SAFETYHOOK_NOINLINE uintptr_t exe(uintptr_t CODUOSP, uintptr_t CODUOMP) {
 }
 
 
-uintptr_t sp_mp(uintptr_t CODUOSP, uintptr_t CODUOMP = 0) {
+uintptr_t sp_mp(uintptr_t CODUOSP, uintptr_t CODUOMP) {
 
     if (!LoadedGame)
         return NULL;
@@ -479,12 +479,15 @@ HMODULE __stdcall LoadLibraryHook(const char* filename) {
 
     if (strstr(filename, LoadedGame->cgamename) != NULL) {
         codDLLhooks(hModule);
+        component_loader::post_cgame();
     }
     else if (strstr(filename, LoadedGame->uixname) != NULL) {
         ui_hooks(hModule);
+        component_loader::post_ui();
     }
-    else if (!strcmp(filename,"uo_gamex86.dll")) {
+    else if (!strcmp(filename,"uo_gamex86.dll") && sp_mp(1)) {
         game_hooks(hModule);
+        component_loader::post_game_sp();
     }
 
     return hModule;
@@ -675,8 +678,10 @@ int __stdcall glOrtho_detour(double left, double right, double bottom, double to
 uintptr_t InsideWinMain;
 
 uintptr_t cvar_init_og;
-
 int Cvar_Init_hook() {
+
+    component_loader::post_unpack();
+
     int* size_cvars = (int*)0x4805EC0;
     r_ext_texture_filter_anisotropic = Cevar_Get("r_ext_texture_filter_anisotropic", 16, CVAR_ARCHIVE | CVAR_LATCH, 1, 16);
     printf("cvar_init cvar hooks cvar_get ptr %p size %d\n", Cvar_Get, *size_cvars);
@@ -711,11 +716,6 @@ int Cvar_Init_hook() {
     return result;
 }
 
-void sub_431CA0(SafetyHookContext& ctx) {
-
-
-
-}
 void LoadMenuConfigs();
 
 
@@ -1630,7 +1630,6 @@ void G_CheckForPreventFriendlyFire_hook(uintptr_t unknown) {
 }
 
 cevar_s* g_enemyFireDist;
-
 void game_hooks(HMODULE handle) {
     if(!sp_mp(1))
         return;
@@ -1638,6 +1637,7 @@ void game_hooks(HMODULE handle) {
     game_offset = OFFSET;
     if(g_save_allowbadchecksum && g_save_allowbadchecksum->integer)
     Memory::VP::Nop(g(0x200306C8), 5);
+
 
     if (player_sprintmult) {
         auto pattern = hook::pattern(handle, "? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 F6 C4 ? 7A ? 8B 41 ? 83 E0 ? C7 44 81");
@@ -1726,6 +1726,8 @@ void codDLLhooks(HMODULE handle) {
     StaticInstructionPatches();
     Memory::VP::InterceptCall(OFFSET + LoadedGame->CG_DrawFlashImage_Draw, DrawStretch_og, DrawStretch_300135B0);
     Memory::VP::InterceptCall(cg(0x3001221A, 0x3001A8CF), DrawStretch_og, DrawStretch_300135B0);
+
+    //SprintT4_lol(handle);
 
     unsigned int* res = (unsigned int*)LoadedGame->X_res_Addr;
 
@@ -2158,15 +2160,43 @@ int cvar_show_com_printf(const char* format, const char* cvar_name, const char* 
     int result = 0;
     if (cevar && cevar->base) {
         result = Com_Printf("  ^7%s = ^2%s^0", cvar_name, cvar_value);
-        
+
         if (cevar && cevar->limits.has_limits) {
             if (cevar->limits.is_float) {
-                Com_Printf(" ^3Limits:^7 %.2f ^7to^7 %.2f\n",
-                    cevar->limits.f.min, cevar->limits.f.max);
+                const char* min_str = (cevar->limits.f.min == -FLT_MAX) ? "any" : nullptr;
+                const char* max_str = (cevar->limits.f.max == FLT_MAX) ? "any" : nullptr;
+
+                if (min_str && max_str) {
+                    Com_Printf(" ^3Limits:^7 any ^7to^7 any\n");
+                }
+                else if (min_str) {
+                    Com_Printf(" ^3Limits:^7 any ^7to^7 %.2f\n", cevar->limits.f.max);
+                }
+                else if (max_str) {
+                    Com_Printf(" ^3Limits:^7 %.2f ^7to^7 any\n", cevar->limits.f.min);
+                }
+                else {
+                    Com_Printf(" ^3Limits:^7 %.2f ^7to^7 %.2f\n",
+                        cevar->limits.f.min, cevar->limits.f.max);
+                }
             }
             else {
-                Com_Printf(" ^3Limits:^7 %d ^7to^7 %d\n",
-                    cevar->limits.i.min, cevar->limits.i.max);
+                const char* min_str = (cevar->limits.i.min == INT_MIN) ? "any" : nullptr;
+                const char* max_str = (cevar->limits.i.max == INT_MAX) ? "any" : nullptr;
+
+                if (min_str && max_str) {
+                    Com_Printf(" ^3Limits:^7 any ^7to^7 any\n");
+                }
+                else if (min_str) {
+                    Com_Printf(" ^3Limits:^7 any ^7to^7 %d\n", cevar->limits.i.max);
+                }
+                else if (max_str) {
+                    Com_Printf(" ^3Limits:^7 %d ^7to^7 any\n", cevar->limits.i.min);
+                }
+                else {
+                    Com_Printf(" ^3Limits:^7 %d ^7to^7 %d\n",
+                        cevar->limits.i.min, cevar->limits.i.max);
+                }
             }
         }
         else Com_Printf("\n");
@@ -2174,6 +2204,7 @@ int cvar_show_com_printf(const char* format, const char* cvar_name, const char* 
     }
     return Com_Printf(format, cvar_name, cvar_value);
 }
+
 
 void InitHook() {
     CheckGame();
@@ -2184,6 +2215,8 @@ void InitHook() {
     SetProcessDPIAware();
 
     rinput::Init();
+
+    //GetProcAddressD = safetyhook::create_inline(GetProcAddress, stub_GetProcAddress);
 
     //FS_FOpenFileReadD = safetyhook::create_inline(0x423B90, FS_FOpenFileRead);
 
@@ -2268,12 +2301,40 @@ void InitHook() {
                 // Print limits on separate line if they exist
                 if (cevar && cevar->limits.has_limits) {
                     if (cevar->limits.is_float) {
-                        Com_Printf(" ^3Limits:^7 %.2f ^7to^7 %.2f\n",
-                            cevar->limits.f.min, cevar->limits.f.max);
+                        const char* min_str = (cevar->limits.f.min == -FLT_MAX) ? "any" : nullptr;
+                        const char* max_str = (cevar->limits.f.max == FLT_MAX) ? "any" : nullptr;
+
+                        if (min_str && max_str) {
+                            Com_Printf(" ^3Limits:^7 any ^7to^7 any\n");
+                        }
+                        else if (min_str) {
+                            Com_Printf(" ^3Limits:^7 any ^7to^7 %.2f\n", cevar->limits.f.max);
+                        }
+                        else if (max_str) {
+                            Com_Printf(" ^3Limits:^7 %.2f ^7to^7 any\n", cevar->limits.f.min);
+                        }
+                        else {
+                            Com_Printf(" ^3Limits:^7 %.2f ^7to^7 %.2f\n",
+                                cevar->limits.f.min, cevar->limits.f.max);
+                        }
                     }
                     else {
-                        Com_Printf(" ^3Limits:^7 %d ^7to^7 %d\n",
-                            cevar->limits.i.min, cevar->limits.i.max);
+                        const char* min_str = (cevar->limits.i.min == INT_MIN) ? "any" : nullptr;
+                        const char* max_str = (cevar->limits.i.max == INT_MAX) ? "any" : nullptr;
+
+                        if (min_str && max_str) {
+                            Com_Printf(" ^3Limits:^7 any ^7to^7 any\n");
+                        }
+                        else if (min_str) {
+                            Com_Printf(" ^3Limits:^7 any ^7to^7 %d\n", cevar->limits.i.max);
+                        }
+                        else if (max_str) {
+                            Com_Printf(" ^3Limits:^7 %d ^7to^7 any\n", cevar->limits.i.min);
+                        }
+                        else {
+                            Com_Printf(" ^3Limits:^7 %d ^7to^7 %d\n",
+                                cevar->limits.i.min, cevar->limits.i.max);
+                        }
                     }
                 }
             }
