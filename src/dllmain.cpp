@@ -1553,7 +1553,7 @@ void ui_hooks(HMODULE handle) {
 
         if (cvar_version && cvar_version->string) {
             char buffer[128]{};
-            sprintf_s(buffer, sizeof(buffer), "%s CCH r%d %s", cvar_version->string, BUILD_NUMBER, COMMIT_HASH);
+            sprintf_s(buffer, sizeof(buffer), "%s CoDUO_QOL r%d %s", cvar_version->string, BUILD_NUMBER, COMMIT_HASH);
             hook_shortversion = Cvar_Get("hook_shortversion", buffer, CVAR_ROM);
         }
 
@@ -2121,7 +2121,7 @@ int __cdecl com_init_hook(void* unknown) {
 
     if (version && version->string) {
 
-        sprintf_s(buffer, sizeof(buffer), "CCH r%d %s %s", BUILD_NUMBER, BUILD_TIME_UTC,COMMIT_HASH);
+        sprintf_s(buffer, sizeof(buffer), "CoDUO_QOL r%d %s %s", BUILD_NUMBER, BUILD_TIME_UTC,COMMIT_HASH);
 
         hook_version = Cvar_Get("hook_version", buffer, CVAR_ROM);
 
