@@ -815,8 +815,6 @@ void CG_AdjustFrom640(float& x, float& y, float& w, float& h) {
     CG_AdjustFrom640(&x,&y,&w,&h);
 }
 
-cevar_t* crosshair_scale_w;
-cevar_t* crosshair_scale_h;
 
 void _cdecl crosshair_render_hook(float x, float y, float width, float height, int unk1, float u1, float u2, float v1, float rotation, int shaderHandle) {
     int side;
@@ -1719,6 +1717,20 @@ void HandleWeaponADS_hack(float* current_weapon_fov) {
 
 }
 
+int __cdecl trap_R_DrawStretchPic_center_cross(
+    float x,
+    float y,
+    float w,
+    float h,
+    float s1,
+    float t1,
+    float s2,
+    float t2,
+    int hShader) {
+    CG_AdjustFrom640(x, y, w, h);
+    return cdecl_call<int>(trap_R_DrawStretchPic, x, y, w, h, s1, t1, s2, t2, hShader);
+}
+
 void codDLLhooks(HMODULE handle) {
     // printf("run");
     uintptr_t OFFSET = (uintptr_t)handle;
@@ -1764,6 +1776,18 @@ void codDLLhooks(HMODULE handle) {
 
 
     Memory::VP::InterceptCall(cg(0x30011F68, 0x3001A49B), crosshair_render_func, crosshair_render_hook);
+
+    auto pattern = hook::pattern(handle, "? ? ? ? ? ? 8B 41 ? 83 F8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 75");
+    auto pattern2 = hook::pattern(handle, "? ? ? ? ? ? ? ? ? ? 8B 82 ? ? ? ? 50");
+    if (!pattern.empty() && !pattern2.empty()) {
+        Memory::VP::Patch<void*>(pattern.get_first(2), &DEFAULT_1_0);
+        Memory::VP::Patch<void*>(pattern.get_first(22), &DEFAULT_1_0);
+
+        Memory::VP::Patch<void*>(pattern2.get_first(2), &DEFUALT_SCREEN_HEIGHT);
+        Memory::VP::Patch<void*>(pattern2.get_first(60 + 2), &DEFUALT_SCREEN_WIDTH);
+
+        Memory::VP::InjectHook(pattern2.get_first(89), trap_R_DrawStretchPic_center_cross);
+    }
 
     static cevar_s* cg_drawCrosshair_friendly_green;
 
