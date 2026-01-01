@@ -1154,8 +1154,8 @@ void __fastcall Item_Paint_Hook(itemDef_t* item, SafetyHookInline* hook, bool ui
         //printf("item %s\n", item->window.name);
     }
 
-    if (config && menu && menu->items && menu->items[0] == item || item && item->window.name && (strcmp(item->window.name,"main_back_top") == 0) ) {
-        if (config && config->alignment.black_screen || item && item->window.name && (strcmp(item->window.name, "main_back_top") == 0)) {
+    if (config && menu && menu->items && menu->items[0] == item /*|| item && item->window.name && (strcmp(item->window.name,"main_back_top") == 0)*/ ) {
+        if (config && config->alignment.black_screen /*|| item && item->window.name && (strcmp(item->window.name, "main_back_top") == 0)*/) {
             static float black[4] = { 0.f,0.f,0.f,1.f };
             ui ? DrawStretch_ui(0.f, 0.f, 640.f, 480.f, black) : DrawStretch_stretched(0.f, 0.f, 640.f, 480.f, black);
         }
