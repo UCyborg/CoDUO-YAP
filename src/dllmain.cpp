@@ -57,8 +57,8 @@ cevar_t* cg_fov_fix_lowfovads;
 cevar_t* cg_fovMin;
 cvar_t* cg_fovscale;
 cevar_t* cg_hudelem_alignhack;
-cvar_t* cg_fovfixaspectratio;
-cevar_t* cg_fixaspect;
+cvar_t* cg_fixedAspectFOV;
+cevar_t* cg_fixedAspect;
 cvar_t* safeArea_horizontal;
 cvar_t* safeArea_vertical;
 cvar_t* r_noborder;
@@ -278,7 +278,7 @@ double CG_GetViewFov_hook() {
         double tanHalfFov = tan(halfFovRad);
 
 
-        if (cg_fovfixaspectratio && cg_fovfixaspectratio->integer) {
+        if (cg_fixedAspectFOV && cg_fixedAspectFOV->integer) {
             // Convert horizontal FOV to vertical, then back to horizontal with new aspect ratio
             // Convert to vertical FOV (aspect-independent)
             double tanHalfVFov = tanHalfFov / STANDARD_ASPECT;
@@ -413,7 +413,7 @@ LPVOID GetModuleEndAddress(HMODULE hModule) {
 
 // For glOrtho - adjusts screen-space ortho projection
 double process_widths(double width = 0) {
-    if (cg_fixaspect && !cg_fixaspect->base->integer) {
+    if (cg_fixedAspect && !cg_fixedAspect->base->integer) {
         return 0.f;
     }
     float x = (float)*(int*)LoadedGame->X_res_Addr;
@@ -430,7 +430,7 @@ double process_widths(double width = 0) {
 // For game functions - adjusts game's internal 480-based coordinate system
 double process_width(double width = 0) {
 
-    if (cg_fixaspect && !cg_fixaspect->base->integer) {
+    if (cg_fixedAspect && !cg_fixedAspect->base->integer) {
         return 0.f;
     }
 
@@ -525,7 +525,7 @@ BOOL __stdcall FreeLibraryHook(HMODULE hLibModule) {
 }
 
 float get_safeArea_horizontal() {
-    if (cg_fixaspect && !cg_fixaspect->base->integer) {
+    if (cg_fixedAspect && !cg_fixedAspect->base->integer) {
         return 1.f;
     }
     float printing = safeArea_horizontal != 0 ? safeArea_horizontal->value : 1.f;
@@ -540,7 +540,7 @@ float get_safeArea_horizontal() {
 
 
 float get_safeArea_vertical_hack() {
-    if (cg_fixaspect && !cg_fixaspect->base->integer) {
+    if (cg_fixedAspect && !cg_fixedAspect->base->integer) {
         return 0.f;
     }
     if (!safeArea_vertical)
@@ -695,8 +695,8 @@ int Cvar_Init_hook() {
     cg_fovscale_ads = Cvar_Get((char*)"cg_fovscale_ads", "1.0", CVAR_ARCHIVE);
 
     cg_fov_fix_lowfovads = Cevar_Get((char*)"cg_fov_fix_lowfovads", 0, CVAR_ARCHIVE, 0, 2);
-    cg_fovfixaspectratio = Cvar_Get((char*)"cg_fixaspectFOV", "1", CVAR_ARCHIVE);
-    cg_fixaspect = Cevar_Get((char*)"cg_fixaspect", 1, CVAR_ARCHIVE, 0, 3, Resolution_Static_mod_cb);
+    cg_fixedAspectFOV = Cvar_Get((char*)"cg_fixedAspectFOV", "1", CVAR_ARCHIVE);
+    cg_fixedAspect = Cevar_Get((char*)"cg_fixedAspect", 1, CVAR_ARCHIVE, 0, 3, Resolution_Static_mod_cb);
     safeArea_horizontal = Cvar_Get((char*)"safeArea_horizontal", "1.0", CVAR_ARCHIVE);
     safeArea_vertical = Cvar_Get((char*)"safeArea_vertical", "1.0", CVAR_ARCHIVE);
     printf("safearea ptr return %p size after %d\n", safeArea_horizontal, *size_cvars);
@@ -801,7 +801,7 @@ void CG_AdjustFrom640(float* x, float* y, float* w, float* h) {
     *x *= *cg_screenXScale;
     if(y)
     *y *= *cg_screenYScale;
-    if (cg_fixaspect && cg_fixaspect->base->integer) {
+    if (cg_fixedAspect && cg_fixedAspect->base->integer) {
         if (w)
             *w *= *cg_screenXScale;
         if (h)
@@ -2014,8 +2014,8 @@ void codDLLhooks(HMODULE handle) {
             VirtualProtect(cg_drawupperright_x, sizeof(cg_drawupperright_x), PAGE_EXECUTE_READWRITE, &oldProtect);
         }
 
-        if(cg_fixaspect)
-        set_cg_drawupperright_x_wide(cg_fixaspect->base->integer);
+        if(cg_fixedAspect)
+        set_cg_drawupperright_x_wide(cg_fixedAspect->base->integer);
     }
 
 }
@@ -2097,8 +2097,8 @@ cvar_s* __cdecl Cvar_Set(const char* cvar_name, const char* value, BOOL force) {
     // Special hardcoded callbacks
     if (cvar == safeArea_horizontal) {
         StaticInstructionPatches(NULL, false);
-        if (cg_fixaspect)
-            set_cg_drawupperright_x_wide(cg_fixaspect->base->integer);
+        if (cg_fixedAspect)
+            set_cg_drawupperright_x_wide(cg_fixedAspect->base->integer);
     }
 
     return cvar;
@@ -2488,8 +2488,8 @@ void InitHook() {
     pat = hook::pattern("68 ? ? ? ? 56 FF 15 ? ? ? ? 83 C4 ? 5F");
     if (!pat.empty()) {
         static auto R_init_end = safetyhook::create_mid(pat.get_first(), [](SafetyHookContext& ctx) {
-            if(cg_fixaspect)
-            Resolution_Static_mod(cg_fixaspect->base);
+            if(cg_fixedAspect)
+            Resolution_Static_mod(cg_fixedAspect->base);
 
             });
     }
