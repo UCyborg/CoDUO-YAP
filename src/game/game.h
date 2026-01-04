@@ -87,13 +87,13 @@ namespace game
     class symbolp
     {
     public:
-        symbolp(std::initializer_list<std::string_view> patterns, const size_t offset_val = 0, game_module module = EXE, bool dereference = false)
+        symbolp(std::initializer_list<std::string_view> patterns, const signed int offset_val = 0, game_module module = EXE, bool dereference = false)
             : patterns(patterns), offset_val(offset_val), module(module), dereference(dereference), object(nullptr)
         {
             register_as_component();
         }
 
-        symbolp(std::string_view pattern_str, const size_t offset_val = 0, game_module module = EXE, bool dereference = false)
+        symbolp(std::string_view pattern_str, const signed int offset_val = 0, game_module module = EXE, bool dereference = false)
             : patterns({ pattern_str }), offset_val(offset_val), module(module), dereference(dereference), object(nullptr)
         {
             register_as_component();
@@ -113,6 +113,10 @@ namespace game
         {
             return this->get();
         }
+
+        //bool operator==(const T& other) const {
+        //    return (this->get() == other);
+        //}
 
     private:
         void register_as_component()
@@ -206,7 +210,7 @@ namespace game
         }
 
         std::vector<std::string_view> patterns;
-        size_t offset_val;
+        signed int offset_val;
         game_module module;
         bool dereference;
         mutable T* object;
@@ -220,7 +224,7 @@ extern Com_PrintfT Com_Printf;
 extern uint32_t* player_flags;
 
 namespace game {
-	void __cdecl Cmd_AddCommand(const char* command_name, void* function);
+	//void __cdecl Cmd_AddCommand(const char* command_name, void* function);
 
 	extern int FS_FOpenFileByMode(const char* qpath, fileHandle_t* f, fsMode_t mode);
 
@@ -233,6 +237,9 @@ namespace game {
 
     WEAK symbolp<qhandle_t> whiteShader{ "A1 ? ? ? ? 8B 15 ? ? ? ? ? ? ? 83 C4",1,game::EXE,true};
     WEAK symbolp<void(float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader)> drawStretchPic{ "8B 0D ? ? ? ? 8B 81 ? ? ? ? 83 C0 ? 3D ? ? ? ? 0F 87 ? ? ? ? 56 8D B4 08 ? ? ? ? 85 F6 89 81 ? ? ? ? 74" };
+
+    WEAK symbolp<int(const char* command_name, void* function)> Cmd_AddCommand{ "85 C0 53 55 8B 6C 24 ? 56 57 8B F8 74 ? 8B 77",-5 };
+
 	//WEAK symbol<void(float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader)> drawStretchPic{ 0x4DF240 };
 	WEAK symbol<void(float *color)> SetColor{ 0x4DF1B0 };
 

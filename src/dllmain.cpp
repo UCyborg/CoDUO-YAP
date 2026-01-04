@@ -42,9 +42,18 @@ SafetyHookMid* CreateMidHook(T target, safetyhook::MidHookFn destination, safety
 }
 
 
-
+std::vector<const char*> QOL_registered_cvars;
 typedef cvar_t* (__cdecl* Cvar_GetT)(const char* var_name, const char* var_value, int flags);
-Cvar_GetT Cvar_Get = (Cvar_GetT)NULL;
+Cvar_GetT Cvar_GetPtr = (Cvar_GetT)NULL;
+
+cvar_t* __cdecl Cvar_Get(const char* var_name, const char* var_value, int flag) {
+
+    if (!(std::find(QOL_registered_cvars.begin(), QOL_registered_cvars.end(), var_name) != QOL_registered_cvars.end())) {
+        QOL_registered_cvars.push_back(var_name);
+    }
+
+    return Cvar_GetPtr(var_name, var_value, flag);
+}
 
 // SP Only
 
@@ -373,7 +382,7 @@ COD_Classic_Version* CheckGame() {
 }
 
 void SetUpFunctions() {
-    Cvar_Get = (Cvar_GetT)LoadedGame->Cvar_Get_Addr;
+    Cvar_GetPtr = (Cvar_GetT)LoadedGame->Cvar_Get_Addr;
 }
 
 int __stdcall glviewport_47BD978 (DWORD xo, DWORD yo , DWORD x, DWORD y) {
@@ -674,6 +683,14 @@ int __stdcall glOrtho_detour(double left, double right, double bottom, double to
 uintptr_t InsideWinMain;
 
 uintptr_t cvar_init_og;
+
+void PrintRegisteredCvars() {
+    Com_Printf("Registered QOL cvars (%d total):\n", QOL_registered_cvars.size());
+    for (const char* cvar : QOL_registered_cvars) {
+        Com_Printf("  %s\n", cvar);
+    }
+}
+
 int Cvar_Init_hook() {
 
     component_loader::post_unpack();
@@ -705,10 +722,12 @@ int Cvar_Init_hook() {
     player_sprintmult = Cvar_Get("player_sprintmult", "0.66666669", CVAR_CHEAT);
 
     if (sp_mp(1)) {
-        g_save_allowbadchecksum = Cvar_Get("g_save_allowbadchecksum", "0", 1);
+        //g_save_allowbadchecksum = Cvar_Get("g_save_allowbadchecksum", "0", 1);
     }
 
     cg_hudelem_alignhack = Cevar_Get("cg_hudelem_alignhack", 0, CVAR_ARCHIVE, 0);
+
+    game::Cmd_AddCommand("qol_showallcvars", PrintRegisteredCvars);
 
     return result;
 }
@@ -1636,8 +1655,8 @@ void game_hooks(HMODULE handle) {
         return;
     uintptr_t OFFSET = (uintptr_t)handle;
     game_offset = OFFSET;
-    if(g_save_allowbadchecksum && g_save_allowbadchecksum->integer)
-    Memory::VP::Nop(g(0x200306C8), 5);
+    //if(g_save_allowbadchecksum && g_save_allowbadchecksum->integer)
+    //Memory::VP::Nop(g(0x200306C8), 5);
 
 
     if (player_sprintmult) {

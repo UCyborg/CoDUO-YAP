@@ -9,7 +9,7 @@
 // CEVAR - EXTENDED CVAR SYSTEM WITH OVERLOADED CREATION
 // ============================================================================
 typedef cvar_t* (__cdecl* Cvar_GetT)(const char* var_name, const char* var_value, int flags);
-extern Cvar_GetT Cvar_Get;
+cvar_t* __cdecl Cvar_Get(const char* var_name, const char* var_value, int flag);
 extern SafetyHookInline Cvar_Set_og;
 
 
