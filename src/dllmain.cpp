@@ -3,6 +3,8 @@ import game;
 #include "pch.h"
 #include "game/game.h"
 #include <component_loader.h>
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi.lib")
 #include "utils/common.h"
 //#include "MinHook.h"
 
@@ -2601,18 +2603,77 @@ void InitHook() {
     printf("should call the cg func\n");
 
     HHOOK hook = SetWindowsHookExA(WH_CALLWNDPROC, [](int code, WPARAM w, LPARAM l) -> LRESULT {
-    if (code >= 0) {
-        CWPSTRUCT* p = (CWPSTRUCT*)l;
-        if (p->message == WM_CREATE) {
-            HWND hConsole = GetConsoleWindow();
-            if (hConsole) {
-                HICON hIconBig = (HICON)GetClassLongPtrA(hConsole, GCLP_HICON);
-                HICON hIconSmall = (HICON)GetClassLongPtrA(hConsole, GCLP_HICONSM);
-                if (hIconBig && hIconSmall) {
-                    SetClassLongPtrA(p->hwnd, GCLP_HICON, (LONG_PTR)hIconBig);
-                    SetClassLongPtrA(p->hwnd, GCLP_HICONSM, (LONG_PTR)hIconSmall);
-                }
+    if (code < 0) return CallNextHookEx(NULL, code, w, l);
+
+    CWPSTRUCT* p = reinterpret_cast<CWPSTRUCT*>(l);
+    static char windowTitle[256];
+    static constexpr char CODUOSPWINDOW[] = "CoD:United Offensive";
+    static constexpr char CODUOMPWINDOW[] = "Multiplayer";
+    static constexpr char EXTERNALCONSOLEWINDOW[] = "Console";
+    static std::unordered_map<HWND, bool> processedWindows;
+
+    // Check for the game's own windows
+    bool isCoDUOSP = false, isCoDUOMP = false, isExternalConsole = false;
+    if (p->message == WM_CREATE || p->message == WM_SIZE) {
+        GetWindowTextA(p->hwnd, windowTitle, sizeof(windowTitle));
+        isCoDUOSP = (strcmp(windowTitle, CODUOSPWINDOW) == 0);
+        isCoDUOMP = (strstr(windowTitle, CODUOMPWINDOW) != nullptr);
+        isExternalConsole = (strstr(windowTitle, EXTERNALCONSOLEWINDOW) != nullptr);
+    }
+
+    if (p->message == WM_CREATE) {
+        // Set the game icon for all windows
+        HWND hConsole = GetConsoleWindow();
+        if (hConsole) {
+            HICON hIconBig = reinterpret_cast<HICON>(GetClassLongPtrA(hConsole, GCLP_HICON));
+            HICON hIconSmall = reinterpret_cast<HICON>(GetClassLongPtrA(hConsole, GCLP_HICONSM));
+            if (hIconBig) SetClassLongPtrA(p->hwnd, GCLP_HICON, reinterpret_cast<LONG_PTR>(hIconBig));
+            if (hIconSmall) SetClassLongPtrA(p->hwnd, GCLP_HICONSM, reinterpret_cast<LONG_PTR>(hIconSmall));
+        }
+
+        // Exclude the splash screen
+        if (!(GetWindowLongA(p->hwnd, GWL_STYLE) & WS_DLGFRAME)) {
+            return CallNextHookEx(NULL, code, w, l);
+        }
+
+        if (isCoDUOSP || isCoDUOMP) {
+        // Add minimize button for game windows
+            LONG style = GetWindowLongA(p->hwnd, GWL_STYLE);
+            SetWindowLongA(p->hwnd, GWL_STYLE, style | WS_MINIMIZEBOX);
+
+        // Apply dark titlebar (Win10+) to game windows
+            BOOL darkMode = TRUE;
+            DwmSetWindowAttribute(p->hwnd, 20, &darkMode, sizeof(darkMode));  // DWMWA_USE_IMMERSIVE_DARK_MODE
+        }
+
+        // Unhide external console
+        else if (isExternalConsole) {
+            ShowWindow(p->hwnd, SW_SHOW);
+            SetWindowPos(p->hwnd, HWND_BOTTOM, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOACTIVATE);
+        }
+    }
+
+    // Move windows to the foreground
+    else if (p->message == WM_SIZE && !isExternalConsole) {
+        LONG style = GetWindowLongA(p->hwnd, GWL_STYLE);
+        if ((style & WS_SYSMENU) == 0) return CallNextHookEx(NULL, code, w, l);
+
+        if (processedWindows.contains(p->hwnd)) {
+            return CallNextHookEx(NULL, code, w, l);
+        }
+
+        WINDOWPLACEMENT wp = { sizeof(wp) };
+        if (GetWindowPlacement(p->hwnd, &wp)) {
+            if (wp.showCmd != SW_NORMAL) {
+                ShowWindow(p->hwnd, SW_RESTORE);
             }
+            processedWindows[p->hwnd] = true;
+            SetWindowPos(p->hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOACTIVATE);
+            SetWindowPos(p->hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            SetForegroundWindow(p->hwnd);
         }
     }
     return CallNextHookEx(NULL, code, w, l); }, NULL, GetCurrentThreadId());
