@@ -15,6 +15,8 @@
 double process_width(double width);
 namespace gui {
     cevar_s* branding = nullptr;
+    cevar_s* cg_ammo_overwrite_size_enabled = nullptr;
+    cevar_s* cg_ammo_overwrite_size = nullptr;
 	void draw_branding() {
         if (!branding || !branding->base || !branding->base->integer)
             return;
@@ -47,8 +49,34 @@ namespace gui {
             if (!pattern.empty()) {
                 RE_EndFrameD = safetyhook::create_inline(pattern.get_first(), RE_EndFrame_hook);
             }
+            cg_ammo_overwrite_size = Cevar_Get("cg_ammo_overwrite_size", 0.325f,CVAR_ARCHIVE);
+            cg_ammo_overwrite_size_enabled = Cevar_Get("cg_ammo_overwrite_size_enabled", 1, CVAR_ARCHIVE);
 
         }
+
+        void post_cgame() override
+        {
+            HMODULE cg = (HMODULE)cg_game_offset;
+
+            auto pattern = hook::pattern(cg, "52 50 8D 74 24 ? E8 ? ? ? ? 83 C4 ? 5F 5E 5B 83 C4 ? C3 8B 4C 24 ? 8B 54 24 ? 8B 44 24 ? 51");
+
+            if (!pattern.empty()) {
+                CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
+
+                    if (cg_ammo_overwrite_size_enabled->base->integer && cg_ammo_overwrite_size->base->value) {
+
+                        float& scale = *(float*)&ctx.eax;
+                        scale = cg_ammo_overwrite_size->base->value;
+
+
+                    }
+
+
+                    });
+            }
+
+        }
+
     };
 
 }
