@@ -4,6 +4,10 @@
     "alignment": "[BLACKSCREEN]"
   },
   {
+    "menuName": "connect",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
     "menuName": "deadscreen",
     "alignment": "[BLACKSCREEN]"
   },
@@ -16,17 +20,19 @@
     "alignment": "[BLACKSCREEN]"
   },
   {
+    "menuName": "options_menu",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
     "menuName": "pregame",
+    "alignment": "[BLACKSCREEN]"
+  },
+  {
+    "menuName": "save_load_menu",
     "alignment": "[BLACKSCREEN]"
   },
   {
     "menuName": "victoryscreen",
     "alignment": "[BLACKSCREEN]"
-  },
-  {
-    "menuName": "options_menu",
-    "alignment": "[BLACKSCREEN]"
   }
-  
-
 ]

@@ -84,11 +84,23 @@
     "alignment": "[RB]"
   },
   {
+    "shaderName": "gfx/icons/hint_health.tga",
+    "alignment": "[RB]"
+  },
+  {
     "shaderName": "gfx/hud/hud@health.dds",
     "alignment": "[RB]"
   },
   {
+    "shaderName": "gfx/hud/hud@health_back.dds",
+    "alignment": "[RB]"
+  },
+  {
     "shaderName": "gfx/hud/hud@health_bar.dds",
+    "alignment": "[RB]"
+  },
+  {
+    "shaderName": "gfx/hud/hud@health_cross.tga",
     "alignment": "[RB]"
   }
 ]
