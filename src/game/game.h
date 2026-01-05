@@ -3,7 +3,7 @@
 #include "..\structs.h"
 #include "..\loader\component_loader.h"
 #include <Hooking.Patterns.h>
-
+#include "..\framework.h"
 #define WEAK __declspec(selectany)
 
 extern uintptr_t cg_game_offset;
@@ -206,7 +206,7 @@ namespace game
                 error_msg += std::to_string(i + 1) + ": \"" + std::string(patterns[i]) + "\"\n";
             }
 
-            MessageBoxA(NULL, error_msg.c_str(), "CODUO_QOL: Error", MB_ICONSTOP);
+            MessageBoxA(NULL, error_msg.c_str(), MOD_NAME": Error", MB_ICONSTOP);
         }
 
         std::vector<std::string_view> patterns;

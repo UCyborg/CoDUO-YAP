@@ -62,3 +62,5 @@ inline Ret thiscall_call(uintptr_t addr, Args... args) {
 #define LIBRARY "DDRAW.dll"
 
 #define LIBRARYW TEXT(LIBRARY)
+
+#define MOD_NAME "CoDUO_QOL"

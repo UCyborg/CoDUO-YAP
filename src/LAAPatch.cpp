@@ -42,7 +42,7 @@ void LAACheck()
         return; // Game is already 4GB/LAA patched, exit out
 
     if (MessageBoxA(NULL,
-        "Your game executable is missing the 4GB / LAA patch.\n\nDo you want CoDUO_QoL to patch the game's .exe for you? (Recommended)",
+        "Your game executable is missing the 4GB / LAA patch.\n\nDo you want " MOD_NAME" to patch the game's .exe for you? (Recommended)",
         "4GB / Large Address Aware patch missing!",
         MB_YESNO | MB_ICONEXCLAMATION) == IDYES)
     {
@@ -125,20 +125,20 @@ void LAACheck()
 
         if (LAA_ErrorNum == 0)
         {
-            MessageBoxA(NULL, "CoDUO_QoL has successfully patched the game's .exe and also created a backup copy.\n\n",
+            MessageBoxA(NULL, MOD_NAME" has successfully patched the game's .exe and also created a backup copy.\n\n",
                 "4GB / Large Address Aware patch successful!", 0);
         }
         else
         {
             char errText[256];
-            sprintf_s(errText, "CoDUO_QoL failed to patch the game's .exe (error %d)\n\nYou can manually patch it yourself by using the \"NTCore 4GB Patch\" tool - an internet search should help find it!", LAA_ErrorNum);
+            sprintf_s(errText, MOD_NAME" failed to patch the game's .exe (error %d)\n\nYou can manually patch it yourself by using the \"NTCore 4GB Patch\" tool - an internet search should help find it!", LAA_ErrorNum);
             MessageBoxA(NULL, errText, "4GB / Large Address Aware patch failed...", MB_ICONEXCLAMATION);
         }
     }
     else {
         // New dialog to ask if the user doesn't want to be prompted again
         if (MessageBoxA(NULL,
-            "CoDUO_QoL has not patched the game's .exe, would you like to stop future reminders?",
+            MOD_NAME" has not patched the game's .exe, would you like to stop future reminders?",
             "Stop Patch Notifications",
             MB_YESNO | MB_ICONEXCLAMATION) == IDYES)
         {

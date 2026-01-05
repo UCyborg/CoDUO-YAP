@@ -1591,7 +1591,7 @@ void ui_hooks(HMODULE handle) {
 
         if (cvar_version && cvar_version->string) {
             char buffer[128]{};
-            sprintf_s(buffer, sizeof(buffer), "%s CoDUO_QOL r%d %s", cvar_version->string, BUILD_NUMBER, COMMIT_HASH);
+            sprintf_s(buffer, sizeof(buffer), "%s " MOD_NAME " r%d %s", cvar_version->string, BUILD_NUMBER, COMMIT_HASH);
             hook_shortversion = Cvar_Get("hook_shortversion", buffer, CVAR_ROM);
         }
 
@@ -2211,7 +2211,7 @@ int __cdecl com_init_hook(void* unknown) {
 
     if (version && version->string) {
 
-        sprintf_s(buffer, sizeof(buffer), "CoDUO_QOL r%d %s %s", BUILD_NUMBER, BUILD_TIME_UTC,COMMIT_HASH);
+        sprintf_s(buffer, sizeof(buffer), MOD_NAME" r%d %s %s", BUILD_NUMBER, BUILD_TIME_UTC,COMMIT_HASH);
 
         hook_version = Cvar_Get("hook_version", buffer, CVAR_ROM);
 
@@ -2379,7 +2379,7 @@ BOOL WritePrivateProfileStringW_UAL(LPCWSTR lpAppName, LPCWSTR lpKeyName, LPCWST
 void InitHook() {
     CheckGame();
     if (!CheckGame()) {
-        MessageBoxW(NULL, L"Unsupported game", L"CoDUO_QOL", MB_OK | MB_ICONWARNING);
+        MessageBoxW(NULL, L"Unsupported game", TEXT(MOD_NAME), MB_OK | MB_ICONWARNING);
         return;
     }
     
@@ -2403,10 +2403,10 @@ void InitHook() {
     auto UALPresent = IsUALPresent();
 
     if (!UALPresent && thisModuleFileName() != LIBRARYW) {
-        MessageBoxA(NULL, "It appears that Ulitmate ASI Loader is missing, it's highly recommended that you use it to load the mod, otherwise expect issues!", "CoDUO_QOL", MB_OK | MB_ICONWARNING);
+        MessageBoxA(NULL, "It appears that Ulitmate ASI Loader is missing, it's highly recommended that you use it to load the mod, otherwise expect issues!", MOD_NAME, MB_OK | MB_ICONWARNING);
     }
     else if (UALPresent && thisModuleFileName() != LIBRARYW && nDontLoadFromDllMain) {
-        MessageBoxA(NULL, "Detected loading via Ultimate ASI Loader, but DontLoadFromDllMain within global.ini is set to true, which is unsupported for CoDUO_QOL and will cause issues with the steam version!, this has been automatically disabled, please restart.", "CoDUO_QOL", MB_OK | MB_ICONWARNING);
+        MessageBoxA(NULL, "Detected loading via Ultimate ASI Loader, but DontLoadFromDllMain within global.ini is set to true, which is unsupported for " MOD_NAME " and will cause issues with the steam version!, this has been automatically disabled, please restart.", MOD_NAME, MB_OK | MB_ICONWARNING);
         WritePrivateProfileStringW_UAL(TEXT("globalsets"), TEXT("dontloadfromdllmain"), TEXT("0"), iniPaths);
     }
 

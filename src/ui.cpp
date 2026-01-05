@@ -12,6 +12,7 @@
 #include <optional>
 #include "GMath.h"
 #include <buildnumber.h>
+#include "framework.h"
 double process_width(double width);
 namespace gui {
     cevar_s* branding = nullptr;
@@ -27,7 +28,7 @@ namespace gui {
         const auto scale = 0.16f;
         float color[4] = { 1.f, 1.f, 1.f, 0.50f * 0.7f };
         float color_shadow[4] = { 0.f, 0.f, 0.f, 0.80f * 0.7f };
-        auto text = "CODUOQoL r" BUILD_NUMBER_STR;
+        auto text = MOD_NAME " r" BUILD_NUMBER_STR;
         if (branding->base->integer != 2) {
             game::SCR_DrawString(x + 1, y + 1, fontID, scale, color_shadow, text, NULL, NULL, NULL);
         }
