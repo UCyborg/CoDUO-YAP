@@ -2410,6 +2410,9 @@ void InitHook() {
         Memory::VP::Patch<uint8_t>((0x431CEF + 1), CVAR_SYSTEMINFO | CVAR_ARCHIVE);
         Memory::VP::Patch<uint8_t>((0x4AC6F1 + 1), CVAR_SYSTEMINFO | CVAR_ARCHIVE);
         Memory::VP::Patch<uint8_t>((0x44EB32 + 1), CVAR_SYSTEMINFO | CVAR_ARCHIVE);
+
+        // dont set sv_cheats to 0 on /map load
+        Memory::VP::Nop(0x0044A458, 5);
     }
 
     std::wstring modulePath = GetModulePath(NULL);
