@@ -1,4 +1,4 @@
-# CoDUO_QOL - A plugin for Call of Duty: United Offensive
+# CoDUO_YAP - Yet another plugin for Call of Duty: United Offensive
 Aiming to provide enhancements, quality of life features and extended features for CoDUO SP & MP with the main focus being SP
 
 

@@ -33,11 +33,11 @@ jobs:
       run: |
         mkdir upload
         copy "Release\ddraw.dll" upload\
-        copy "Release\CoDUO_QOL.pdb" upload\
+        copy "Release\CoDUO_YAP.pdb" upload\
         xcopy gameroot\menuwide upload\menuwide /E /I /Y
     
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: CoDUO_QOL
+        name: CoDUO_YAP
         path: upload

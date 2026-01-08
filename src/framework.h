@@ -63,4 +63,5 @@ inline Ret thiscall_call(uintptr_t addr, Args... args) {
 
 #define LIBRARYW TEXT(LIBRARY)
 
-#define MOD_NAME "CoDUO_QOL"
+#define MOD_NAME "CoDUO-YAP"
+#define MOD_NAME_BRANDING "CoDUO-YAP"
