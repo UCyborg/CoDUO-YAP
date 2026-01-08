@@ -109,7 +109,7 @@ namespace gui {
 
                 cg_subtitle_centered_y = Cevar_Get("cg_subtitle_centered_y", 0x1A9, CVAR_ARCHIVE);
 
-                cg_subtitle_centered_spacing_multiplier = Cevar_Get("cg_subtitle_centered_spacing_multiplier", 1.f, CVAR_ARCHIVE | CVAR_LATCH | CVAR_NORESTART);
+                cg_subtitle_centered_spacing_multiplier = Cevar_Get("cg_subtitle_centered_spacing_multiplier", 1.f, CVAR_ARCHIVE);
 
                 cg_DrawPlayerStance_disable = Cevar_Get("cg_DrawPlayerStance_disable", 0, CVAR_ARCHIVE, 0, 2);
 
