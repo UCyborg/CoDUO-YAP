@@ -5,6 +5,8 @@ import game;
 #include <component_loader.h>
 #include <dwmapi.h>
 #pragma comment(lib, "dwmapi.lib")
+#include <shellapi.h>
+#pragma comment(lib, "shell32.lib")
 #include "utils/common.h"
 #include "cexception.hpp"
 //#include "MinHook.h"
@@ -2693,11 +2695,25 @@ void InitHook() {
     if (code < 0) return CallNextHookEx(NULL, code, w, l);
 
     CWPSTRUCT* p = reinterpret_cast<CWPSTRUCT*>(l);
+    static HWND hConsole = NULL;
+    static bool isWine = false;
     static char windowTitle[256];
     static constexpr char CODUOSPWINDOW[] = "CoD:United Offensive";
     static constexpr char CODUOMPWINDOW[] = "Multiplayer";
     static constexpr char EXCEPTIONTRACERWINDOW[] = "Application Crash";
     static constexpr char EXTERNALCONSOLEWINDOW[] = "Console";
+
+    if (!hConsole) {
+        hConsole = GetConsoleWindow();
+        typedef const char* (CDECL *wine_get_version_t)(void);
+        HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+        wine_get_version_t pwine_get_version = NULL;
+        if (hNtdll) {
+            pwine_get_version = (wine_get_version_t)GetProcAddress(hNtdll, "wine_get_version");
+        }
+        isWine = (pwine_get_version != NULL);
+    }
+
     // Filter messages
     static std::unordered_map<HWND, uint8_t> windowsHookCache;
     // Bits: 0 = CoDUO(SP/MP), 1 = ExceptionTracer, 2 = ExternalConsole, 3 = AlreadyProcessed
@@ -2731,8 +2747,18 @@ void InitHook() {
 
     if (p->message == WM_CREATE) {
         // Set the game icon for all windows
-        HWND hConsole = GetConsoleWindow();
-        if (hConsole && hConsole != p->hwnd) {
+        if (hConsole == NULL || isWine) {
+            char modulePath[MAX_PATH];
+            if (GetModuleFileNameA(NULL, modulePath, sizeof(modulePath))) {
+                HICON hIcon = ExtractIconA(NULL, modulePath, 0);
+                if (hIcon && hIcon != (HICON)INVALID_HANDLE_VALUE) {
+                    HICON hDup = CopyIcon(hIcon);
+                    SetClassLongPtrW(p->hwnd, GCLP_HICON, reinterpret_cast<LONG_PTR>(hDup));
+                    DestroyIcon(hIcon);
+                }
+            }
+        }
+        else if (hConsole != p->hwnd) {
             HICON hIconBig = reinterpret_cast<HICON>(GetClassLongPtrA(hConsole, GCLP_HICON));
             HICON hIconSmall = reinterpret_cast<HICON>(GetClassLongPtrA(hConsole, GCLP_HICONSM));
             if (hIconBig) SetClassLongPtrA(p->hwnd, GCLP_HICON, reinterpret_cast<LONG_PTR>(hIconBig));
@@ -2749,11 +2775,14 @@ void InitHook() {
             LONG style = GetWindowLongA(p->hwnd, GWL_STYLE);
             SetWindowLongA(p->hwnd, GWL_STYLE, style | WS_MINIMIZEBOX);
 
-        // Automatically apply dark titlebar (Win10+) to game windows
-            if (hConsole && hConsole != p->hwnd) {
-                BOOL darkMode = FALSE;
-                DwmGetWindowAttribute(hConsole, 20, &darkMode, sizeof(darkMode));
-                DwmSetWindowAttribute(p->hwnd, 20, &darkMode, sizeof(darkMode));   // DWMWA_USE_IMMERSIVE_DARK_MODE
+        // Automatically apply dark titlebar to game windows
+            if (!isWine && p->message == WM_CREATE) {
+                BOOL darkMode = TRUE;
+                // DWMWA_USE_IMMERSIVE_DARK_MODE
+                if (hConsole && hConsole != p->hwnd) DwmGetWindowAttribute(hConsole, 20, &darkMode, sizeof(darkMode));
+                if (FAILED(DwmSetWindowAttribute(p->hwnd, 20, &darkMode, sizeof(darkMode)))) {
+                    // XP/Vista/7/DWM-off
+                }
             }
         }
 
