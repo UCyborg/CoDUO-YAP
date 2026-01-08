@@ -2061,6 +2061,13 @@ void codDLLhooks(HMODULE handle) {
 
         });
 
+    CreateMidHook(cg(0x3001F7DF), [](SafetyHookContext& ctx) {
+
+        float& clock_x = *(float*)ctx.esi;
+        clock_x -= (process_width() * 0.5f) * get_safeArea_horizontal();
+
+        });
+
     cg_fov = Cvar_Find("cg_fov");
 
     if (sp_mp(0, 1)) {
