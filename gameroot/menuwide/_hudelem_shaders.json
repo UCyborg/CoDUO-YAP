@@ -102,5 +102,17 @@
   {
     "shaderName": "gfx/hud/hud@health_cross.tga",
     "alignment": "[RB]"
+  },
+  {
+    "shaderName": "gfx/hud/tankhudhealthbar",
+    "alignment": "[RB]"
+  },
+  {
+    "shaderName": "gfx/hud/tankhudhealthbar2",
+    "alignment": "[RB]"
+  },
+  {
+    "shaderName": "gfx/hud/tankhudback",
+    "alignment": "[RB]"
   }
 ]
