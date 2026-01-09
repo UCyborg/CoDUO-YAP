@@ -56,6 +56,20 @@ Aiming to provide enhancements, quality of life features and extended features f
 ### Installation notes
 CoDUO-YAP can also be loaded using [Ultimate-ASI-Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader), by renaming the .dll extension to an .asi (name can also be changed), but this requires setting DontLoadFromDllMain=0 in UAL's global.ini for Steam versions.
 
+## FAQ:
+- Does this work with the original **Call Of Duty (2003)** release?
+  
+  No.
+- Is it planned?
+
+  No, if you want to play through the original COD1 campaign use ["Singleplayer Improved"](https://www.moddb.com/mods/singleplayer-improved) or ["United Fronts" ](https://www.moddb.com/mods/call-of-duty-united-fronts)
+
+- I'm running into issue **XYZ**
+ 
+    Please report it on the [issues](https://github.com/Clippy95/CoDUO-YAP/issues) but try the latest [action](https://github.com/Clippy95/CoDUO-YAP/actions?query=branch%3Amaster) and see if the problem is already solved.
+
+  
+
 ### Credits:
 - [RTCW-SP/MP](https://github.com/id-Software/RTCW-SP/)
 - [ioq3](https://github.com/ioquake/ioq3)
@@ -66,5 +80,6 @@ CoDUO-YAP can also be loaded using [Ultimate-ASI-Loader](https://github.com/Thir
 - [VladWinner](https://github.com/VladWinner) - For tesing, suggestions and other several contributions.
 - [Ultimate-ASI-Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader)
 - momo5502
+- [JBShady](https://github.com/JBShady) - cleaned up COD2+ crosshair texture
 
   
