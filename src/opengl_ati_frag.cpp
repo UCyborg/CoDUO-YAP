@@ -1107,6 +1107,39 @@ namespace opengl_ati_frag {
             //        fglGetFloatv(GL_FOG_COLOR, g_cached_fog.color);
             //            });
 
+             pattern = hook::pattern("0F 84 ? ? ? ? 8B 0D ? ? ? ? 39 71 ? 0F 84 ? ? ? ? 68 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68");
+            GL_ATI_fragment_shader_force_jump = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& ctx) {
+
+                if (!fglCreateShader || !fglShaderSource || !fglCompileShader) {
+                    printf("[ERROR] Failed to load GLSL functions! OpenGL 2.0 not available?\n");
+                    return;
+                }
+                auto r_nv_register_combiners = Cvar_Find("r_nv_register_combiners");
+                auto r_nv_texture_shader = Cvar_Find("r_nv_texture_shader");
+                bool GL_NV_fragment_combo = ExtensionExists("GL_NV_texture_shader") || ExtensionExists("GL_NV_register_combiners");
+                bool GL_ATI_FRAGMENT_SHADER_exists = ExtensionExists("GL_ATI_fragment_shader");
+
+
+                bool skip_due_to_nvidia = GL_NV_fragment_combo &&
+                    (r_nv_register_combiners->integer > 0 || r_nv_texture_shader->integer > 0);
+                bool skip_due_to_ati = GL_ATI_FRAGMENT_SHADER_exists &&
+                    (r_arb_fragment_shader_wrap_ati->base->integer < 2);
+
+                if (!skip_due_to_nvidia && !skip_due_to_ati) {
+                    if ((fglCreateShader && fglUseProgram) && (r_arb_fragment_shader_wrap_ati->base->integer)) {
+                        ctx.eip = (GL_ATI_fragment_shader_force_jump.target_address() + 6);
+                        ATI_FRAGMENT_SHADER_VALID = true;
+                        Com_Printf("[" MOD_NAME "] " "Force Enabling GL_ATI_fragment_shader by translating it to GL_ARB_FRAGMENT_SHADER\n");
+                    }
+                }
+                else {
+                    ATI_FRAGMENT_SHADER_VALID = false;
+                    Com_Printf("[" MOD_NAME "] " "Skipping wrapped GL_ARB_FRAGMENT_SHADER because GL_NV_texture_shader or GL_NV_register_combiners or GL_ATI_fragment_shader already exists, disable r_nv_register_combiners or r_nv_texture_shader\nas for GL_ATI_FRAGMENT_SHADER use r_arb_fragment_shader_wrap_ati 2 to force wrapping it!\n");
+                }
+
+                });
+
+
         }
 
         void on_ogl_load(HMODULE tOHGL) override
@@ -1165,39 +1198,6 @@ namespace opengl_ati_frag {
                 printf("  fglCreateProgram: %p\n", fglCreateProgram);
                 printf("  fglLinkProgram: %p\n", fglLinkProgram);
                 printf("  fglUseProgram: %p\n", fglUseProgram);
-
-                if (!fglCreateShader || !fglShaderSource || !fglCompileShader) {
-                    printf("[ERROR] Failed to load GLSL functions! OpenGL 2.0 not available?\n");
-                }
-                else {
-                    auto pattern = hook::pattern("0F 84 ? ? ? ? 8B 0D ? ? ? ? 39 71 ? 0F 84 ? ? ? ? 68 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68 ? ? ? ? A3 ? ? ? ? A3 ? ? ? ? FF 15 ? ? ? ? 68");
-                    GL_ATI_fragment_shader_force_jump = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& ctx) {
-
-                        auto r_nv_register_combiners = Cvar_Find("r_nv_register_combiners");
-                        auto r_nv_texture_shader = Cvar_Find("r_nv_texture_shader");
-                        bool GL_NV_fragment_combo = ExtensionExists("GL_NV_texture_shader") || ExtensionExists("GL_NV_register_combiners");
-                        bool GL_ATI_FRAGMENT_SHADER_exists = ExtensionExists("GL_ATI_fragment_shader");
-
-
-                        bool skip_due_to_nvidia = GL_NV_fragment_combo &&
-                            (r_nv_register_combiners->integer > 0 && r_nv_texture_shader->integer > 0);
-                        bool skip_due_to_ati = GL_ATI_FRAGMENT_SHADER_exists &&
-                            (r_arb_fragment_shader_wrap_ati->base->integer < 2);
-
-                        if (!skip_due_to_nvidia && !skip_due_to_ati) {
-                            if ((fglCreateShader && fglUseProgram) && (r_arb_fragment_shader_wrap_ati->base->integer)) {
-                                ctx.eip = (GL_ATI_fragment_shader_force_jump.target_address() + 6);
-                                ATI_FRAGMENT_SHADER_VALID = true;
-                                Com_Printf("[" MOD_NAME "] " "Force Enabling GL_ATI_fragment_shader by translating it to GL_ARB_FRAGMENT_SHADER\n");
-                            }
-                        }
-                        else {
-                            ATI_FRAGMENT_SHADER_VALID = false;
-                            Com_Printf("[" MOD_NAME "] " "Skipping wrapped GL_ARB_FRAGMENT_SHADER because GL_NV_texture_shader or GL_NV_register_combiners or GL_ATI_fragment_shader already exists, disable r_nv_register_combiners or r_nv_texture_shader\nas for GL_ATI_FRAGMENT_SHADER use r_arb_fragment_shader_wrap_ati 2 to force wrapping it!\n");
-                        }
-
-                        });
-                }
 
                     });
 
