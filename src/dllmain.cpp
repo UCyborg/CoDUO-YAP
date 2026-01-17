@@ -10,6 +10,7 @@ import game;
 #include "utils/common.h"
 #include "cexception.hpp"
 #include "utils/hooking.h"
+#include <direct.h>
 //#include "MinHook.h"
 
 
@@ -2505,6 +2506,7 @@ void InitHook() {
     }
 
     if (!UALPresent) {
+        (void)_mkdir("CrashDumps");
         SetUnhandledExceptionFilter(CustomUnhandledExceptionFilter);
     }
 
