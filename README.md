@@ -31,6 +31,7 @@ Aiming to provide enhancements, quality-of-life improvements and advanced featur
 | `reload_eweapons` | Console command to reload eWeapon definitions **(SP only)** |
 | `cg_subtitle_centered_enable` | Aligns subtitles to the center rather than the left |
 | `cg_ammo_overwrite_size_enabled` & `cg_ammo_overwrite_size` | Allows you to customize the font size of the ammo counter |
+| `branding`| Draws current version on top left |
 | and possible some more… | Use the `qol_showallcvars` command to show all cvars registered by the plugin! |
 </details>
 
