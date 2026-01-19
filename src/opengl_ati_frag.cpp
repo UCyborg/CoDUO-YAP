@@ -22,7 +22,7 @@ cevar_s* r_arb_fragment_fresnel_power;
 cevar_s* r_arb_fragment_fresnel_bias;
 cevar_s* r_arb_fragment_disable_fog;
 cevar_s* r_arb_fragment_shader_debug_print;
-cevar_s* r_fog_amd_drawsun_workaround;
+cevar_s* r_fog_drawsun_workaround;
 
 
 // Debug print macro for non-looping code (channel 0)
@@ -1036,7 +1036,7 @@ void hooked_RB_DrawSunSprite() {
     }
 
 
-    if (g_sun_shader_program != 0 && fglUseProgram &&  r_fog_amd_drawsun_workaround && r_fog_amd_drawsun_workaround->base->integer) {
+    if (g_sun_shader_program != 0 && fglUseProgram && r_fog_drawsun_workaround && r_fog_drawsun_workaround->base->integer) {
         fglUseProgram(g_sun_shader_program);
 
 
@@ -1054,7 +1054,7 @@ void hooked_RB_DrawSunSprite() {
     cdecl_call<void>(RB_DrawSunSprite_addr);
 
 
-    if (fglUseProgram && r_fog_amd_drawsun_workaround && r_fog_amd_drawsun_workaround->base->integer) {
+    if (fglUseProgram && r_fog_drawsun_workaround && r_fog_drawsun_workaround->base->integer) {
         fglUseProgram(0);
         ATI_DEBUG_PRINT_CHANNEL(1, "[SUN SHADER] Deactivated shader, back to fixed-function\n");
     }
@@ -1169,8 +1169,8 @@ namespace opengl_ati_frag {
                 auto realWglGetProcAddress = (void* (__stdcall*)(const char*))GetProcAddress(opengl_addr, "wglGetProcAddress");
                 // Load GLSL functions manually - game won't request these
 
-                if(!r_fog_amd_drawsun_workaround)
-                    r_fog_amd_drawsun_workaround = Cevar_Get("r_fog_amd_drawsun_workaround", (int)AMD_PostJuneDriver(), CVAR_ARCHIVE, 0, 1);
+                if(!r_fog_drawsun_workaround)
+                    r_fog_drawsun_workaround = Cevar_Get("r_fog_drawsun_workaround", 1, CVAR_ARCHIVE, 0, 1);
 
                 fglCreateShader = (PFNGLCREATESHADERPROC)realWglGetProcAddress("glCreateShader");
                 fglShaderSource = (PFNGLSHADERSOURCEPROC)realWglGetProcAddress("glShaderSource");
