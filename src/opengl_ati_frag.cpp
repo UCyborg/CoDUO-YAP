@@ -1088,7 +1088,7 @@ namespace opengl_ati_frag {
             if(!pattern.empty())
             Memory::VP::InterceptCall(pattern.get_first(), RB_DrawSunSprite_addr, hooked_RB_DrawSunSprite);
 
-            r_arb_fragment_shader_wrap_ati = Cevar_Get("r_arb_fragment_shader_wrap_ati", 1, CVAR_ARCHIVE | CVAR_LATCH, 0, 1);
+            r_arb_fragment_shader_wrap_ati = Cevar_Get("r_arb_fragment_shader_wrap_ati", 1, CVAR_ARCHIVE | CVAR_LATCH, 0, 2);
             r_arb_fragment_shader_debug = Cevar_Get("r_arb_fragment_shader_debug", 0, CVAR_ARCHIVE, -1, 6);
             r_arb_fragment_shader_debug_print = Cevar_Get("r_arb_fragment_shader_debug_print",1, CVAR_ARCHIVE,0,3);
             r_arb_fragment_fresnel_power = Cevar_Get("r_arb_fragment_fresnel_power",2.0f, CVAR_ARCHIVE);  // current Default: 2.0
@@ -1123,7 +1123,7 @@ namespace opengl_ati_frag {
                 bool skip_due_to_nvidia = GL_NV_fragment_combo &&
                     (r_nv_register_combiners->integer > 0 || r_nv_texture_shader->integer > 0);
                 bool skip_due_to_ati = GL_ATI_FRAGMENT_SHADER_exists &&
-                    (r_arb_fragment_shader_wrap_ati->base->integer < 2);
+                    (r_arb_fragment_shader_wrap_ati->base->integer <= 2);
 
                 if (!skip_due_to_nvidia && !skip_due_to_ati) {
                     if ((fglCreateShader && fglUseProgram) && (r_arb_fragment_shader_wrap_ati->base->integer)) {
