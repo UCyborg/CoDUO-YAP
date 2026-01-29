@@ -520,12 +520,12 @@ BOOL __stdcall FreeLibraryHook(HMODULE hLibModule) {
         char LibraryName[256]{};
         GetModuleFileNameA(hLibModule, LibraryName, sizeof(LibraryName));
 
-        if (LoadedGame && LoadedGame->cgamename && (strcmp(LibraryName, LoadedGame->cgamename) == 0)) {
+        if (LoadedGame && LoadedGame->cgamename && (strstr(LibraryName, LoadedGame->cgamename) != 0)) {
             cg_game_offset = 0;
-        } else if (LoadedGame && LoadedGame->cgamename && (strcmp(LibraryName, "uo_gamex86.dll") == 0)) {
+        } else if (LoadedGame && LoadedGame->cgamename && (strstr(LibraryName, "uo_gamex86.dll") != 0)) {
             game_offset = 0;
         }
-        else if (LoadedGame && LoadedGame->cgamename && (strcmp(LibraryName, LoadedGame->uixname) == 0)) {
+        else if (LoadedGame && LoadedGame->cgamename && (strstr(LibraryName, LoadedGame->uixname) != 0)) {
             ui_offset = 0;
         }
 
@@ -2924,6 +2924,17 @@ void InitHook() {
             });
     }
 
+    pat = hook::pattern("A1 ? ? ? ? 8B 48 ? 53 33 DB 3B CB 74");
+
+    if (!pat.empty()) {
+        static auto vid_restart = safetyhook::create_mid(pat.get_first(), [](SafetyHookContext& ctx) {
+
+            cg_game_offset = 0;
+            ui_offset = 0;
+            game_offset = 0;
+
+            });
+    }
 
 }
 
@@ -2944,11 +2955,11 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
-
-        is_shutdown = true;
-
         break;
     case DLL_PROCESS_DETACH:
+
+        //is_shutdown = true;
+
         break;
     }
     return TRUE;
