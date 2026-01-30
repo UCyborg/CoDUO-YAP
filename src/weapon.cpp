@@ -16,6 +16,8 @@ namespace weapon {
     cevar_t* cg_weaponBobAmplitudeSprinting_horz;
     cevar_t* cg_weaponBobAmplitudeSprinting_vert;
 
+    cevar_t* bg_allowJumpShot;
+
     cevar_t* cg_bobAmplitudeSprinting_horz;
 
     cevar_t* cg_bobAmplitudeSprinting_vert;
@@ -487,12 +489,53 @@ namespace weapon {
 
     }
 
+    void PatchJumpShot(HMODULE handle) {
+        if (!sp_mp(1))
+            return;
+        auto pattern = hook::pattern(handle, "0F 85 ? ? ? ? 8B 0D ? ? ? ? 8B 90");
+        if (!pattern.empty()) {
+
+            CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
+
+                if (bg_allowJumpShot && bg_allowJumpShot->base && bg_allowJumpShot->base->integer) {
+                    ctx.eip += 6;
+                }
+
+                });
+
+        }
+
+        //pattern = hook::pattern(handle,"83 F8 ? 75 ? ? ? ? ? ? ? ? ? ? ? E9 ? ? ? ? 83 F8");
+        //if (!pattern.empty()) {
+        //    CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
+
+        //        printf("speed %f\n", *(float*)(ctx.esp + 0x8));
+
+        //        });
+        //}
+
+    }
+
+
+    uintptr_t *syscall;
+    static bool do_transitionTime = false;
+    static cevar_s* yap_xanim_iw3_transitionTime;
+    int startweaponanim_syscall(int id, int a1, int a2, float a3, float a4, int a5, int a6, int a7) {
+
+        if (do_transitionTime)
+            a4 = yap_xanim_iw3_transitionTime->base->value;
+
+        return cdecl_call<int>(*syscall, id, a1, a2, a3, a4, a5, a6, a7);
+
+    }
+
 
     class component final : public component_interface
     {
     public:
         void post_unpack() override
         {
+            yap_xanim_iw3_transitionTime = Cevar_Get("yap_xanim_iw3_transitionTime", 0.5f, CVAR_ARCHIVE, 0.f, 1.f);
             if (sp_mp(1)) {
                 cg_weaponBobAmplitudeSprinting_horz = Cevar_Get("cg_BobweaponAmplitudeSprinting_horz", 0.02f, 0, 0.f, 1.f);
                 cg_weaponBobAmplitudeSprinting_vert = Cevar_Get("cg_BobweaponAmplitudeSprinting_vert", 0.014f, 0, 0.f, 1.f);
@@ -504,6 +547,8 @@ namespace weapon {
 
                 player_sprintSpeedScale = Cevar_Get("player_sprintSpeedScale", 1.6f, NULL, 0.f, FLT_MAX);
 
+                bg_allowJumpShot = Cevar_Get("bg_allowJumpShot", 0, CVAR_ARCHIVE, 0, 1);
+
                 game::Cmd_AddCommand("reload_eweapons", loadEWeapons);
 
             }
@@ -512,6 +557,52 @@ namespace weapon {
 
         void post_cgame() override
         {
+
+            auto pattern = hook::pattern((HMODULE)cg_game_offset,"74 ? 43 83 FB");
+            
+            if (!pattern.empty()) {
+                CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
+
+                    if (yap_xanim_iw3_transitionTime->base->value != 0.f)
+                        do_transitionTime = true;
+
+                    });
+
+                pattern = hook::pattern((HMODULE)cg_game_offset, "FF 15 ? ? ? ? 83 C4 ? 46 83 C7");
+                if (!pattern.empty()) {
+
+                    Memory::VP::Read(pattern.get_first(2), syscall);
+                    Memory::VP::Nop(pattern.get_first(), 6);
+                    Memory::VP::InjectHook(pattern.get_first(), startweaponanim_syscall,Memory::VP::HookType::Call);
+
+                    pattern = hook::pattern((HMODULE)cg_game_offset, "75 ? 5F 5E 5D 83 C4");
+
+                    if (!pattern.empty()) {
+                        CreateMidHook(pattern.get_first(2), [](SafetyHookContext& ctx) {
+
+                            
+                                do_transitionTime = false;
+
+                            });
+                    }
+
+                }
+                //pattern = hook::pattern((HMODULE)cg_game_offset, "51 56 53 68 ? ? ? ? FF 15 ? ? ? ? 83 C4 ? 46");
+
+                //if (!pattern.empty()) {
+
+                //    CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
+
+                //        if (do_transitionTime) {
+                //            *(float*)(ctx.esp) = yap_xanim_iw3_transitionTime->base->value;
+                //        }
+
+                //        });
+
+                //}
+
+            }
+
             if (!sp_mp(1))
                 return;
             loadEWeapons();
@@ -525,13 +616,14 @@ namespace weapon {
 
             Memory::VP::InjectHook(cg(0x3002C9CE), CG_GetViewVerticalBobFactor_sprint);
             Memory::VP::InjectHook(cg(0x3002C961), CG_GetViewVerticalBobFactor_sprint);
-
+            PatchJumpShot((HMODULE) cg_game_offset);
 
         }
 
         void post_game_sp() override
         {
             PatchSprintScale((HMODULE)game_offset);
+            PatchJumpShot((HMODULE)game_offset);
         }
 
     };
