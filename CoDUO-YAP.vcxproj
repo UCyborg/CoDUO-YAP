@@ -223,6 +223,7 @@ popd</Command>
     <ClCompile Include="include\safetyhook.cpp" />
     <ClCompile Include="include\Zydis.c" />
     <ClCompile Include="src\SDLLP.cpp" />
+    <ClCompile Include="src\sound.cpp" />
     <ClCompile Include="src\ui.cpp" />
     <ClCompile Include="src\utils\common.cpp" />
     <ClCompile Include="src\utils\hooking.cpp" />
