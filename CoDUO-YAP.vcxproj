@@ -206,6 +206,7 @@ popd</Command>
     <ClCompile Include="src\bink.cpp" />
     <ClCompile Include="src\cevars.cpp" />
     <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\files_hook.cpp" />
     <ClCompile Include="src\fov.cpp" />
     <ClCompile Include="src\game.ixx" />
     <ClCompile Include="include\Hooking.Patterns.cpp" />

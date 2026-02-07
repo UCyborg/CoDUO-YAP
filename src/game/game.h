@@ -382,6 +382,8 @@ namespace game {
 
     WEAK symbolp<int(const char* command_name, void* function)> Cmd_AddCommand{ "85 C0 53 55 8B 6C 24 ? 56 57 8B F8 74 ? 8B 77",-5 };
 
+	WEAK symbolp<void*(size_t size)> Hunk_AllocateTempMemory{ "85 C9 56 57 75 ? 8B 7C 24",-6 };
+
 	//WEAK symbol<void(float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader)> drawStretchPic{ 0x4DF240 };
 	WEAK symbol<void(float *color)> SetColor{ 0x4DF1B0 };
     WEAK symbolp<qhandle_t> cstate{ "A1 ? ? ? ? 83 E8 00",1,game::EXE,true };
