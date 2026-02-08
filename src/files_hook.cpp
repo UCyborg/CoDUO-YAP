@@ -87,7 +87,6 @@ namespace files_hook {
         if (vfilename.ends_with(".menu")) {
             
         }
-        printf("file %s\n", filename);
         if (fs_rawfiles) {
             if (fs_rawfiles->base->integer == 2)
                 trySpecial = true;
