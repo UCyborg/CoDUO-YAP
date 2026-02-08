@@ -2,9 +2,10 @@
 Aiming to provide enhancements, quality-of-life improvements and advanced features for CoD:UO SP & MP, with the main focus on SP
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/ada7ac00-201e-42ca-9b0d-5293c90a1af6"
+  <img src="https://github.com/user-attachments/assets/e4531a86-b2bc-44fa-95b9-9c40e3d48245"
        alt="Highlights"/>
 </p>
+
 
 <details open><summary><h2>Features/cvars:</h2></summary>
 
@@ -31,6 +32,8 @@ Aiming to provide enhancements, quality-of-life improvements and advanced featur
 | `cg_drawCrosshair_friendly_green` | `1` will change the crosshair color to green when aiming at friendly NPCs **(SP only)** |
 | `cg_weaponSprint_mod` <h5 id="cg_weaponsprint_mod"></h5> | Restores <sup><sup>yes this was planned for UO</sup></sup>  and implements new **weapon bobbing** while sprinting and **rotation attributes** inspired by T4, requires new eWeapon files for each weapon **(SP only)**<img src="https://github.com/user-attachments/assets/dc0ccdae-9d7a-4c06-8941-c7535c0b1771" alt="cg_weaponsprint_mod"/> |
 | `reload_eweapons` | Console command to reload eWeapon definitions **(SP only)** |
+| `bg_allowJumpShot` | allows player to keep ADS while jumping (SP only) |
+| `yap_xanim_iw3_transitionTime` | implements xanim transitionTime for weapon animations, akin to IW3+ this achieves lerp'd cancel weapon switches animations |
 | `cg_subtitle_centered_enable` | Aligns subtitles to the center rather than the left |
 | `cg_ammo_overwrite_size_enabled` & `cg_ammo_overwrite_size` | Allows you to customize the font size of the ammo counter |
 | `branding`| Draws current version on top left |
