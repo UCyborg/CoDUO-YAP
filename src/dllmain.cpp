@@ -2523,7 +2523,6 @@ void InitHook() {
 
     //FS_FOpenFileReadD = safetyhook::create_inline(0x423B90, FS_FOpenFileRead);
 
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     Cvar_getD = safetyhook::create_inline(LoadedGame->Cvar_Get_Addr, Cvar_get_Hook);
 
     InitializeDisplayModesForGame();
