@@ -535,7 +535,7 @@ namespace weapon {
     public:
         void post_unpack() override
         {
-            yap_xanim_iw3_transitionTime = Cevar_Get("yap_xanim_iw3_transitionTime", 0.5f, CVAR_ARCHIVE, 0.f, 1.f);
+            yap_xanim_iw3_transitionTime = Cevar_Get("yap_xanim_iw3_transitionTime", 0.f, CVAR_ARCHIVE, 0.f, 1.f);
             if (sp_mp(1)) {
                 cg_weaponBobAmplitudeSprinting_horz = Cevar_Get("cg_BobweaponAmplitudeSprinting_horz", 0.02f, 0, 0.f, 1.f);
                 cg_weaponBobAmplitudeSprinting_vert = Cevar_Get("cg_BobweaponAmplitudeSprinting_vert", 0.014f, 0, 0.f, 1.f);
