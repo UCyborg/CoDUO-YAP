@@ -518,16 +518,16 @@ namespace weapon {
 
 
     uintptr_t *syscall;
-    static bool do_transitionTime = false;
-    static cevar_s* yap_xanim_iw3_transitionTime;
-    int startweaponanim_syscall(int id, int a1, int a2, float a3, float a4, int a5, int a6, int a7) {
+    //static bool do_transitionTime = false;
+    //static cevar_s* yap_xanim_iw3_transitionTime;
+    //int startweaponanim_syscall(int id, int a1, int a2, float a3, float a4, int a5, int a6, int a7) {
 
-        if (do_transitionTime)
-            a4 = yap_xanim_iw3_transitionTime->base->value;
+    //    if (do_transitionTime)
+    //        a4 = yap_xanim_iw3_transitionTime->base->value;
 
-        return cdecl_call<int>(*syscall, id, a1, a2, a3, a4, a5, a6, a7);
+    //    return cdecl_call<int>(*syscall, id, a1, a2, a3, a4, a5, a6, a7);
 
-    }
+    //}
 
 
     class component final : public component_interface
@@ -535,7 +535,7 @@ namespace weapon {
     public:
         void post_unpack() override
         {
-            yap_xanim_iw3_transitionTime = Cevar_Get("yap_xanim_iw3_transitionTime", 0.f, CVAR_ARCHIVE, 0.f, 1.f);
+            //yap_xanim_iw3_transitionTime = Cevar_Get("yap_xanim_iw3_transitionTime", 0.f, CVAR_ARCHIVE, 0.f, 1.f);
             if (sp_mp(1)) {
                 cg_weaponBobAmplitudeSprinting_horz = Cevar_Get("cg_BobweaponAmplitudeSprinting_horz", 0.02f, 0, 0.f, 1.f);
                 cg_weaponBobAmplitudeSprinting_vert = Cevar_Get("cg_BobweaponAmplitudeSprinting_vert", 0.014f, 0, 0.f, 1.f);
@@ -560,48 +560,48 @@ namespace weapon {
 
             auto pattern = hook::pattern((HMODULE)cg_game_offset,"74 ? 43 83 FB");
             
-            if (!pattern.empty()) {
-                CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
+            //if (!pattern.empty()) {
+            //    CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
 
-                    if (yap_xanim_iw3_transitionTime->base->value != 0.f)
-                        do_transitionTime = true;
+            //        if (yap_xanim_iw3_transitionTime->base->value != 0.f)
+            //            do_transitionTime = true;
 
-                    });
+            //        });
 
-                pattern = hook::pattern((HMODULE)cg_game_offset, "FF 15 ? ? ? ? 83 C4 ? 46 83 C7");
-                if (!pattern.empty()) {
+            //    pattern = hook::pattern((HMODULE)cg_game_offset, "FF 15 ? ? ? ? 83 C4 ? 46 83 C7");
+            //    if (!pattern.empty()) {
 
-                    Memory::VP::Read(pattern.get_first(2), syscall);
-                    Memory::VP::Nop(pattern.get_first(), 6);
-                    Memory::VP::InjectHook(pattern.get_first(), startweaponanim_syscall,Memory::VP::HookType::Call);
+            //        Memory::VP::Read(pattern.get_first(2), syscall);
+            //        Memory::VP::Nop(pattern.get_first(), 6);
+            //        Memory::VP::InjectHook(pattern.get_first(), startweaponanim_syscall,Memory::VP::HookType::Call);
 
-                    pattern = hook::pattern((HMODULE)cg_game_offset, "75 ? 5F 5E 5D 83 C4");
+            //        pattern = hook::pattern((HMODULE)cg_game_offset, "75 ? 5F 5E 5D 83 C4");
 
-                    if (!pattern.empty()) {
-                        CreateMidHook(pattern.get_first(2), [](SafetyHookContext& ctx) {
+            //        if (!pattern.empty()) {
+            //            CreateMidHook(pattern.get_first(2), [](SafetyHookContext& ctx) {
 
-                            
-                                do_transitionTime = false;
+            //                
+            //                    do_transitionTime = false;
 
-                            });
-                    }
+            //                });
+            //        }
 
-                }
-                //pattern = hook::pattern((HMODULE)cg_game_offset, "51 56 53 68 ? ? ? ? FF 15 ? ? ? ? 83 C4 ? 46");
+            //    }
+            //    //pattern = hook::pattern((HMODULE)cg_game_offset, "51 56 53 68 ? ? ? ? FF 15 ? ? ? ? 83 C4 ? 46");
 
-                //if (!pattern.empty()) {
+            //    //if (!pattern.empty()) {
 
-                //    CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
+            //    //    CreateMidHook(pattern.get_first(), [](SafetyHookContext& ctx) {
 
-                //        if (do_transitionTime) {
-                //            *(float*)(ctx.esp) = yap_xanim_iw3_transitionTime->base->value;
-                //        }
+            //    //        if (do_transitionTime) {
+            //    //            *(float*)(ctx.esp) = yap_xanim_iw3_transitionTime->base->value;
+            //    //        }
 
-                //        });
+            //    //        });
 
-                //}
+            //    //}
 
-            }
+            //}
 
             if (!sp_mp(1))
                 return;
