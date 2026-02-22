@@ -75,10 +75,10 @@ namespace rinput {
 
 	static void rawInput_init(HWND hWnd)
 	{
-		RAWINPUTDEVICE rid[1]{};
+		RAWINPUTDEVICE rid[1];
 		rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
 		rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
-		rid[0].dwFlags = RIDEV_INPUTSINK;
+		rid[0].dwFlags = 0;
 		rid[0].hwndTarget = hWnd;
 		if (!RegisterRawInputDevices(rid, ARRAYSIZE(rid), sizeof(rid[0])))
 			throw std::runtime_error("RegisterRawInputDevices failed");
