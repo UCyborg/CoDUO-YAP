@@ -44,8 +44,6 @@ namespace rinput {
 			rawinput_x_old = rawinput_x_current;
 			rawinput_y_old = rawinput_y_current;
 
-			POINT cursorPos;
-			GetCursorPos(&cursorPos);
 			SetCursorPos(*window_center_x, *window_center_y);
 			Sys_QueEvent(3, delta_x, delta_y, 0, NULL);
 		}
